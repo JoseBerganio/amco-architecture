@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 
 DEFAULT_MODEL = "qwen2.5:3b"
@@ -28,6 +29,10 @@ DEFAULT_CONTEXT_TOKENS = 4096
 DEFAULT_RESERVED_OUTPUT_TOKENS = 512
 DEFAULT_MEMORY_TOKENS = 1024
 DEFAULT_TIMEOUT_SECONDS = 300
+
+DEFAULT_FRESHNESS_HALF_LIFE_DAYS = 180.0
+DEFAULT_FOLLOWUP_MIN_TERMS = 3
+DEFAULT_FOLLOWUP_TURNS = 2
 
 
 def model_name() -> str:
@@ -46,10 +51,32 @@ def int_env(name: str, default: int) -> int:
     return value if value > 0 else default
 
 
+def float_env(name: str, default: float) -> float:
+    """Read a non-negative, finite float from the environment."""
+    try:
+        value = float(os.getenv(name, ""))
+    except ValueError:
+        return default
+    return value if math.isfinite(value) and value >= 0 else default
+
+
 def context_settings() -> tuple[int, int, int]:
     """Return (context limit, reserved output tokens, memory token cap)."""
     return (
         int_env("AMCO_CONTEXT_TOKENS", DEFAULT_CONTEXT_TOKENS),
         int_env("AMCO_RESERVED_OUTPUT_TOKENS", DEFAULT_RESERVED_OUTPUT_TOKENS),
         int_env("AMCO_MEMORY_TOKENS", DEFAULT_MEMORY_TOKENS),
+    )
+
+
+def freshness_half_life_days() -> float:
+    value = float_env("AMCO_FRESHNESS_HALF_LIFE_DAYS", DEFAULT_FRESHNESS_HALF_LIFE_DAYS)
+    return value if value > 0 else DEFAULT_FRESHNESS_HALF_LIFE_DAYS
+
+
+def followup_settings() -> tuple[int, int]:
+    """Return (min meaningful terms before history is skipped, user turns to borrow)."""
+    return (
+        int_env("AMCO_FOLLOWUP_MIN_TERMS", DEFAULT_FOLLOWUP_MIN_TERMS),
+        int_env("AMCO_FOLLOWUP_TURNS", DEFAULT_FOLLOWUP_TURNS),
     )

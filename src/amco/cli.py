@@ -23,6 +23,7 @@ from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from .config import model_name
@@ -35,6 +36,7 @@ from .storage import (
     delete_memory,
     get_memory,
     list_memories,
+    rebuild_index,
     search_memories,
     session,
     update_memory,
@@ -49,6 +51,7 @@ console = Console()
 err_console = Console(stderr=True)
 
 TYPE_HELP = f"Memory type: {' or '.join(VALID_TYPES)}."
+CONFIDENCE_HELP = "Confidence from 0 to 1 (1 = confirmed)."
 
 
 @app.callback()
@@ -76,10 +79,11 @@ def memory_add(
     content: str = typer.Argument(..., help="Text to save as a memory."),
     category: str = typer.Option("general", "--category", "-c", help="Memory category."),
     memory_type: str = typer.Option("persistent", "--type", "-t", help=TYPE_HELP),
+    confidence: float = typer.Option(1.0, "--confidence", min=0.0, max=1.0, help=CONFIDENCE_HELP),
 ) -> None:
     """Add an explicitly approved memory."""
     try:
-        memory_id = add_memory(content, category, memory_type)
+        memory_id = add_memory(content, category, memory_type, confidence=confidence)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     console.print(f"Saved memory [bold]#{memory_id}[/bold].")
@@ -97,12 +101,13 @@ def memory_list(
     if not records:
         console.print("No memories stored yet.")
         return
-    table = Table("ID", "Type", "Category", "Updated", "Content")
+    table = Table("ID", "Type", "Category", "Conf", "Updated", "Content")
     for item in records:
         table.add_row(
             str(item["id"]),
             item["memory_type"],
             item["category"],
+            f"{item['confidence']:.2f}",
             item["updated_at"] or item["created_at"],
             item["content"],
         )
@@ -119,11 +124,13 @@ def memory_inspect(
         err_console.print(f"No memory found with ID #{memory_id}.")
         raise typer.Exit(code=1)
     console.print(f"[bold]Memory #{item['id']}[/bold]")
-    console.print(f"  Type:     {item['memory_type']}")
-    console.print(f"  Category: {item['category']}")
-    console.print(f"  Source:   {item['source']}")
-    console.print(f"  Created:  {item['created_at']}")
-    console.print(f"  Updated:  {item['updated_at']}")
+    console.print(f"  Type:       {item['memory_type']}")
+    console.print(f"  Category:   {item['category']}")
+    console.print(f"  Source:     {item['source']}")
+    console.print(f"  Confidence: {item['confidence']:.2f}")
+    console.print(f"  Used:       {item['use_count']} times in prompts")
+    console.print(f"  Created:    {item['created_at']}")
+    console.print(f"  Updated:    {item['updated_at']}")
     console.print("  Content:")
     console.print(f"    {item['content']}", markup=False)
 
@@ -134,10 +141,13 @@ def memory_update(
     content: Optional[str] = typer.Option(None, "--content", help="New content."),
     category: Optional[str] = typer.Option(None, "--category", "-c", help="New category."),
     memory_type: Optional[str] = typer.Option(None, "--type", "-t", help=TYPE_HELP),
+    confidence: Optional[float] = typer.Option(
+        None, "--confidence", min=0.0, max=1.0, help=CONFIDENCE_HELP
+    ),
 ) -> None:
-    """Update a memory's content, category, or type."""
+    """Update a memory's content, category, type, or confidence."""
     try:
-        updated = update_memory(memory_id, content, category, memory_type)
+        updated = update_memory(memory_id, content, category, memory_type, confidence=confidence)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     if not updated:
@@ -150,8 +160,9 @@ def memory_update(
 def memory_search(
     query: str = typer.Argument(..., help="Words to search for."),
     limit: int = typer.Option(5, min=1, max=50, help="Maximum results."),
+    explain: bool = typer.Option(False, "--explain", help="Show how each result was scored."),
 ) -> None:
-    """Search stored memories using basic keyword matching."""
+    """Full-text search over memories, ranked by relevance, confidence, freshness and usefulness."""
     records = search_memories(query, limit=limit)
     if not records:
         console.print("No matching memories.")
@@ -159,9 +170,27 @@ def memory_search(
     for item in records:
         console.print(
             f"[bold]#{item['id']}[/bold] \\[{item['memory_type']}/{item['category']}] "
-            f"{item['content']}",
+            f"{escape(item['content'])}",
             highlight=False,
         )
+        if explain:
+            p = item["score_parts"]
+            console.print(
+                f"    score={item['score']:.3f}  R={p['relevance']:.2f} "
+                f"C={p['confidence']:.2f} F={p['freshness']:.2f} U={p['usefulness']:.2f}",
+                markup=False,
+                highlight=False,
+            )
+
+
+@memory_app.command("reindex")
+def memory_reindex() -> None:
+    """Rebuild the full-text search index from the stored memories."""
+    if rebuild_index():
+        console.print("Search index rebuilt.")
+    else:
+        err_console.print("Full-text search (FTS5) is not available in this SQLite build.")
+        raise typer.Exit(code=1)
 
 
 @memory_app.command("delete")
@@ -235,6 +264,16 @@ def _handle_chat_command(line: str, working: WorkingMemory) -> None:
         console.print("Unknown command. Type /help.")
 
 
+def _describe_retrieved(memories: list[dict]) -> str:
+    parts = []
+    for m in memories:
+        label = f"#{m['id']}"
+        if "score" in m:
+            label += f" ({m['score']:.2f})"
+        parts.append(label)
+    return ", ".join(parts)
+
+
 @app.command()
 def chat() -> None:
     """Start a memory-enabled interactive chat with Ollama."""
@@ -263,7 +302,8 @@ def chat() -> None:
         console.print("\n[bold green]AMCO[/bold green]> ", end="")
         console.print(response, markup=False, highlight=False)
         if used_memories:
-            ids = ", ".join(f"#{m['id']}" for m in used_memories)
-            console.print(f"[dim]Retrieved memories: {ids}[/dim]")
+            console.print(
+                f"[dim]Retrieved memories: {_describe_retrieved(used_memories)}[/dim]"
+            )
         else:
             console.print("[dim]Retrieved memories: none[/dim]")

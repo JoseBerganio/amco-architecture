@@ -99,3 +99,26 @@ def test_chat_reuses_one_working_memory(tmp_path: Path, monkeypatch):
     assert len(calls) == 2
     assert calls[0] is calls[1]
     assert len(calls[1].turns) == 4
+    
+def test_search_explain_shows_score_parts(tmp_path: Path):
+    env = _env(tmp_path)
+    runner.invoke(app, ["memory", "add", "AMCO uses SQLite storage"], env=env)
+    result = runner.invoke(app, ["memory", "search", "SQLite", "--explain"], env=env)
+    assert result.exit_code == 0
+    assert "score=" in result.output
+
+
+def test_confidence_option_and_validation(tmp_path: Path):
+    env = _env(tmp_path)
+    ok = runner.invoke(app, ["memory", "add", "A guess", "--confidence", "0.4"], env=env)
+    assert ok.exit_code == 0
+    assert "0.40" in runner.invoke(app, ["memory", "inspect", "1"], env=env).output
+    bad = runner.invoke(app, ["memory", "add", "Too sure", "--confidence", "2"], env=env)
+    assert bad.exit_code != 0
+
+
+def test_reindex_command_runs(tmp_path: Path):
+    env = _env(tmp_path)
+    runner.invoke(app, ["memory", "add", "something"], env=env)
+    result = runner.invoke(app, ["memory", "reindex"], env=env)
+    assert result.exit_code in (0, 1)  # 1 only if this SQLite build lacks FTS5

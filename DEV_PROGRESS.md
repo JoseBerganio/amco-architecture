@@ -2,7 +2,7 @@
 
 Running log of what has been built, changed, and verified in each sprint.
 Project: **AMCO (Adaptive Memory Controller)** — a local-first memory orchestration layer for local LLMs.
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 ## Status at a glance
 
@@ -10,10 +10,10 @@ Last updated: 2026-10-14
 |--------|-----------|--------|
 | 1 | Python project foundation and CLI | Done |
 | 2 | SQLite storage and basic memory commands | Done |
-| 3 | Working Memory, context budgeting, and local model setup | Implemented (pending final verification) |
-| 4 | Full-text search and ranking | Planned |
+| 3 | Working Memory, context budgeting, and local model setup | Done |
+| 4 | Full-text search and ranking | Done |
 
-Current version: `0.1.0`
+Current release: `0.1.0` (published). The 0.2 series is in development; the version string stays at `0.1.0` until the 0.2.0 release.
 Default model: `qwen2.5:3b` (4-bit quantized) via Ollama
 
 ---
@@ -165,6 +165,68 @@ The starter went slightly beyond the original "foundation only" scope and produc
 
 ---
 
+## Sprint 4 — Full-text search, ranking, and follow-up retrieval (0.2 series)
+
+**Goal:** retrieval finds relevant memories more reliably, ranks them with an explainable formula, and no longer fails on short follow-up questions.
+
+### Added
+
+- **SQLite FTS5 index** (`memories_fts`): external-content table over `memories`, indexing content and category with Porter stemming. Triggers keep it in sync on insert, update, and delete. Existing databases are indexed automatically on first connect.
+- **Keyword fallback:** if the SQLite build has no FTS5, search falls back to the Sprint 1–3 keyword counter instead of failing.
+- **Safe query building** (`extract_terms()`): queries are reduced to meaningful terms (no punctuation, stopwords, one-letter tokens, or duplicates, at most 12 terms) and each term is quoted, so user input can never break FTS syntax.
+- **Ranking module** (`src/amco/ranking.py`): `Score = wR·R + wC·C + wF·F + wU·U`.
+  - **R (relevance):** BM25 score, normalized against the best candidate in the pool.
+  - **C (confidence):** new `confidence` column, 0 to 1, default 1.0 (memories added by the user are treated as confirmed).
+  - **F (freshness):** exponential decay on `updated_at`, 180-day half-life by default.
+  - **U (usefulness):** half a type prior (persistent 1.0, long_term 0.6) and half a log-scaled usage count.
+  - Default weights: 0.65 / 0.15 / 0.05 / 0.15. Freshness is deliberately low because recency is not universal importance.
+- **Usage tracking:** `use_count` column, incremented only when a memory was sent to the model in a successful call. A failed model call or a failed usage write never costs the user a reply.
+- **Follow-up retrieval** (`retrieval_query()`): when the current message has fewer than 3 meaningful terms (for example "Is it fast?"), terms from the last 2 user turns are added to the search. Detailed questions are searched as written, and the current message's terms always come first.
+- **Diagnostics:** `amco memory search ... --explain` prints the score and its R/C/F/U parts for each result, and chat shows each retrieved memory's score.
+- **Commands and options:** `--confidence` on `memory add` and `memory update`, `amco memory reindex` to rebuild the index from the stored memories, a `Conf` column in `memory list`, and confidence and usage count in `memory inspect`.
+- **Configuration:** `AMCO_WEIGHT_RELEVANCE`, `AMCO_WEIGHT_CONFIDENCE`, `AMCO_WEIGHT_FRESHNESS`, `AMCO_WEIGHT_USEFULNESS`, `AMCO_FRESHNESS_HALF_LIFE_DAYS`, `AMCO_FOLLOWUP_MIN_TERMS`, `AMCO_FOLLOWUP_TURNS`.
+
+### Changed
+
+- `search_memories()` now retrieves a candidate pool (at least 20) with FTS5, re-ranks it, and returns the top results. Each result carries `score` and `score_parts`.
+- Matching is now by stemmed word instead of substring (for example "answers" matches "answer", but "sql" no longer matches "sqlite").
+- `answer()` searches with `retrieval_query()` and records usage after a successful model call.
+- `add_memory()` and `update_memory()` accept `confidence` (added as the last parameter, so existing callers keep working).
+- Database migration now also adds `confidence` and `use_count` to databases from earlier sprints.
+
+### Fixed
+
+- Memory content containing square brackets (such as `[/x]`) could break Rich markup in `memory search` output. Content is now escaped.
+
+### Tests
+
+- Added `tests/test_ranking.py` (10 tests): freshness decay, usefulness, relevance and confidence ordering, old-but-relevant beats recent-but-unrelated, score parts, custom and environment weights.
+- Added `tests/test_search.py` (13 tests): term extraction, stemming, stopword-only and FTS-syntax queries, index sync on update and delete, legacy-database migration, index rebuild, keyword fallback, confidence tie-breaking, limits, confidence validation, usage counting.
+- Added `tests/test_engine_retrieval.py` (6 tests): follow-up query building, end-to-end follow-up retrieval, usage counted only after a successful call.
+- Added 3 CLI tests: `--explain`, `--confidence`, `reindex`.
+- Total after Sprint 4: 67 tests, none of which need Ollama. FTS5-specific tests are skipped automatically on SQLite builds without FTS5.
+
+### Acceptance criteria
+
+1. Search uses FTS5 and handles word forms (stemming).
+2. Results are ranked by relevance, confidence, freshness, and usefulness, with weights configurable.
+3. `amco memory search --explain` shows how each result was scored.
+4. Short follow-up questions retrieve memories from the previous topic.
+5. Sprint 1–3 databases migrate automatically and their memories are searchable.
+6. Search still works, with the keyword fallback, if FTS5 is unavailable.
+7. The index can be rebuilt with `amco memory reindex`.
+8. Tests pass without Ollama.
+
+**Verification:** `pytest` passed in full.
+
+### Notes from this sprint
+
+- Relevance is normalized within the candidate pool, so a score of 1.0 means "best match among these candidates", not an absolute measure.
+- Follow-up retrieval borrows from user turns only. A pronoun whose topic appeared only in the assistant's reply will not resolve.
+- The ranking weights are a starting heuristic, as the brief says, and still need tuning against real tasks.
+
+____
+
 ## Current command reference
 
 | Command | Purpose |
@@ -172,7 +234,10 @@ The starter went slightly beyond the original "foundation only" scope and produc
 | `amco version` | Show the version |
 | `amco init` | Create the workspace and database |
 | `amco chat` | Interactive chat with Working Memory and memory retrieval |
-| `amco memory add "text" [-c category] [-t type]` | Save a memory |
+| `amco memory add "text" [-c category] [-t type] [--confidence 0-1]` | Save a memory |
+| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...]` | Edit a memory |
+| `amco memory search "words" [--limit N] [--explain]` | Ranked full-text search |
+| `amco memory reindex` | Rebuild the search index |
 | `amco memory list [-t type]` | List memories |
 | `amco memory inspect <id>` | Show one memory in full |
 | `amco memory update <id> [--content ...] [-c ...] [-t ...]` | Edit a memory |
@@ -192,6 +257,13 @@ The starter went slightly beyond the original "foundation only" scope and produc
 | `AMCO_RESERVED_OUTPUT_TOKENS` | `512` | Space kept free for the reply |
 | `AMCO_MEMORY_TOKENS` | `1024` | Cap on tokens spent on retrieved memories |
 | `AMCO_TIMEOUT_SECONDS` | `300` | Model request timeout |
+| `AMCO_WEIGHT_RELEVANCE` | `0.65` | Ranking weight for relevance |
+| `AMCO_WEIGHT_CONFIDENCE` | `0.15` | Ranking weight for confidence |
+| `AMCO_WEIGHT_FRESHNESS` | `0.05` | Ranking weight for freshness |
+| `AMCO_WEIGHT_USEFULNESS` | `0.15` | Ranking weight for usefulness |
+| `AMCO_FRESHNESS_HALF_LIFE_DAYS` | `180` | Days for the freshness score to halve |
+| `AMCO_FOLLOWUP_MIN_TERMS` | `3` | Fewer meaningful terms than this triggers history-aware retrieval |
+| `AMCO_FOLLOWUP_TURNS` | `2` | User turns borrowed for follow-up retrieval |
 
 ## Project structure
 
@@ -200,25 +272,30 @@ src/amco/
 ├── __init__.py
 ├── cli.py        # Typer commands and chat loop
 ├── config.py     # Environment-based settings
-├── engine.py     # Retrieval, memory selection, prompt assembly
+├── engine.py     # Retrieval query, memory selection, prompt assembly
 ├── model.py      # Ollama adapter
-├── storage.py    # SQLite storage, migration, session helper
+├── ranking.py    # Scoring formula (relevance, confidence, freshness, usefulness)
+├── storage.py    # SQLite storage, FTS5 index, migration, search
 └── working.py    # Working Memory and token estimation
 tests/
 ├── test_cli.py
 ├── test_engine.py
 ├── test_engine_context.py
+├── test_engine_retrieval.py
 ├── test_model.py
+├── test_ranking.py
+├── test_search.py
 ├── test_storage.py
 └── test_working.py
 ```
 
 ## Known gaps (deferred to later sprints)
 
-- Retrieval is keyword-only: no full-text search, embeddings, or ranking formula.
-- Retrieval ignores recent conversation turns, so short follow-ups retrieve poorly.
-- Persistent vs. long-term is only a label; no lifecycle rules or automatic promotion.
-- No confidence, provenance beyond `source`, supersession, or expiry metadata.
+- No semantic (embedding) search; FTS5 matches words and their stems, not meaning.
+- Follow-up retrieval uses only recent user turns, not assistant replies.
+- Ranking weights are untuned defaults; there is no evaluation set yet.
+- Persistent vs. long-term is a label plus a small usefulness prior; no lifecycle rules or automatic promotion.
+- No supersession, expiry, or provenance beyond `source`; confidence is set manually.
 - No conflict detection or deduplication.
 - No summarization of dropped turns.
 - No automatic memory evaluation; memories are saved only by explicit command.
@@ -227,6 +304,10 @@ tests/
 - Model adapter is a single function, not yet a base interface.
 
 ---
+
+## Up next
+
+Sprint 5 is not yet planned. Candidates from the roadmap: memory lifecycle rules (promotion, supersession, expiry), conflict detection and deduplication, and a model adapter interface. Semantic retrieval should wait until there is a baseline to measure it against.
 
 ## Release 0.1.0
 
@@ -238,6 +319,3 @@ Sprints 1 to 3 conclude the 0.1.0 release. Sprint 4 onward belongs to the 0.2 se
 
 ---
 
-## Up next — Sprint 4
-
-Retrieval and ranking: SQLite full-text search (FTS5), a first version of the ranking formula (relevance, confidence, freshness, usefulness), and using recent conversation turns to improve retrieval.

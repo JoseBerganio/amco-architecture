@@ -2,7 +2,7 @@
 
 A local-first memory layer for local LLMs. AMCO stores information outside the model, retrieves only what is relevant to the current question, and fits it into the model's context window.
 
-> **Status:** early prototype (v0.1.0). The CLI, SQLite storage, keyword retrieval, Working Memory, and Ollama integration work. Ranking, semantic search, and automatic memory management are still to come.
+**Status:** early prototype. The published release is v0.1.0; the 0.2 series is in development. The CLI, SQLite storage, full-text search with ranking, Working Memory, and Ollama integration work. Semantic search and automatic memory management are still to come.
 
 ## Why AMCO
 
@@ -10,9 +10,9 @@ Local models have a limited context window and forget everything between session
 
 ## Features
 
-- **Persistent memory in SQLite**: add, list, inspect, update, search, and delete memories, with category, type (`persistent` or `long_term`), source, and timestamps.
-- **Working Memory in chat**: conversation history, a pinned task, and a token-budgeted prompt that drops the oldest turns first when the context fills up.
-- **Context budgeting**: retrieved memories are selected to fit a token budget, and a memory is skipped rather than cut short.
+- **Persistent memory in SQLite**: add, list, inspect, update, search, and delete memories, with category, type (`persistent` or `long_term`), confidence, source, and timestamps.
+- **Full-text search with ranking**: SQLite FTS5 finds memories by word (with stemming), then ranks them by relevance, confidence, freshness, and usefulness. Use `--explain` to see how each result was scored.
+- **Follow-up aware retrieval**: short follow-up questions like "Is it fast?" also search using your recent messages.
 - **Local model through Ollama**: defaults to Qwen 2.5 3B (4-bit quantized).
 - **Memories are treated as data, not instructions**: the system prompt tells the model not to follow instructions found inside retrieved memories.
 - **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, and delete any of them.
@@ -51,6 +51,7 @@ amco init
 amco memory add "AMCO uses Python and SQLite for its prototype." --type persistent
 amco memory list
 amco chat
+amco memory search "storage" --explain
 ```
 
 Then ask something in the chat, such as `What does AMCO use for storage?`. After each answer, AMCO shows which memory IDs it retrieved.
@@ -62,11 +63,12 @@ Then ask something in the chat, such as `What does AMCO use for storage?`. After
 | `amco version` | Show the version |
 | `amco init` | Create the workspace and database |
 | `amco chat` | Interactive chat with memory retrieval |
-| `amco memory add "text" [-c category] [-t type]` | Save a memory |
+| `amco memory add "text" [-c category] [-t type] [--confidence 0-1]` | Save a memory |
+| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...]` | Edit a memory |
+| `amco memory search "words" [--limit N] [--explain]` | Ranked full-text search |
+| `amco memory reindex` | Rebuild the search index |
 | `amco memory list [-t type]` | List memories |
 | `amco memory inspect <id>` | Show one memory in full |
-| `amco memory update <id> [--content ...] [-c ...] [-t ...]` | Edit a memory |
-| `amco memory search "words" [--limit N]` | Keyword search |
 | `amco memory delete <id> [--yes]` | Delete a memory |
 
 ### Chat commands
@@ -95,6 +97,15 @@ Settings come from environment variables.
 | `AMCO_RESERVED_OUTPUT_TOKENS` | `512` | Space kept free for the model's reply |
 | `AMCO_MEMORY_TOKENS` | `1024` | Cap on tokens spent on retrieved memories |
 | `AMCO_TIMEOUT_SECONDS` | `300` | Model request timeout |
+| `AMCO_WEIGHT_RELEVANCE` | `0.65` | Ranking weight for relevance |
+| `AMCO_WEIGHT_CONFIDENCE` | `0.15` | Ranking weight for confidence |
+| `AMCO_WEIGHT_FRESHNESS` | `0.05` | Ranking weight for freshness |
+| `AMCO_WEIGHT_USEFULNESS` | `0.15` | Ranking weight for usefulness |
+| `AMCO_FRESHNESS_HALF_LIFE_DAYS` | `180` | Days for the freshness score to halve |
+| `AMCO_FOLLOWUP_MIN_TERMS` | `3` | Fewer meaningful terms than this triggers history-aware retrieval |
+| `AMCO_FOLLOWUP_TURNS` | `2` | User turns borrowed for follow-up retrieval |
+
+Ranking weights are starting defaults and have not been tuned yet.
 
 Example (PowerShell):
 
@@ -118,9 +129,10 @@ The tests use temporary databases and a mocked model, so Ollama does not need to
 src/amco/
 ├── cli.py        # Typer commands and chat loop
 ├── config.py     # Environment-based settings
-├── engine.py     # Retrieval, memory selection, prompt assembly
+├── engine.py     # Retrieval query, memory selection, prompt assembly
 ├── model.py      # Ollama adapter
-├── storage.py    # SQLite storage, migration, session helper
+├── ranking.py    # Scoring formula
+├── storage.py    # SQLite storage, FTS5 index, migration, search
 └── working.py    # Working Memory and token estimation
 tests/            # pytest suite
 ```
@@ -132,17 +144,19 @@ tests/            # pytest suite
 | 1 | Project foundation and CLI | Done |
 | 2 | SQLite storage and memory commands | Done |
 | 3 | Working Memory, context budgeting, local model | Done |
-| 4 | Full-text search and ranking | Planned (0.2) |
+| 4 | Full-text search and ranking | Done (0.2 series) |
 
 Later work includes the three-tier memory lifecycle (working, persistent, long-term), semantic retrieval, conflict handling, diagnostics, and a model adapter interface. See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the detailed log.
 
 ## Known limitations
 
-- Retrieval is keyword-based and only looks at your latest message.
+- Search matches words and their stems, not meaning; semantic search is not implemented yet.
+- Short follow-up questions borrow terms from your recent messages, but not from the model's replies.
+- Ranking weights are untuned defaults.
 - Token counts are estimates (about 4 characters per token).
 - Older chat turns are dropped, not summarized.
 - Memories are never saved automatically; use `amco memory add` or `/remember`.
-- A 3B model may sometimes ignore or misuse retrieved memories. Check the retrieved IDs shown after each answer to tell retrieval problems from model problems.
+- A 3B model may sometimes ignore or misuse retrieved memories. Check the retrieved IDs and scores shown after each answer to tell retrieval problems from model problems.
 
 ## Privacy
 
