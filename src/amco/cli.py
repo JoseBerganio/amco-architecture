@@ -106,10 +106,10 @@ def memory_list(
         table.add_row(
             str(item["id"]),
             item["memory_type"],
-            item["category"],
+            escape(item["category"]),
             f"{item['confidence']:.2f}",
             item["updated_at"] or item["created_at"],
-            item["content"],
+            escape(item["content"]),
         )
     console.print(table)
 
