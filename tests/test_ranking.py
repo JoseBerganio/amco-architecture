@@ -101,3 +101,17 @@ def test_weights_from_env(monkeypatch):
     assert weights.relevance == 0.9
     assert weights.confidence == RankingWeights().confidence
     assert weights.freshness == RankingWeights().freshness
+    
+    
+def test_history_flag_removes_the_long_term_demotion():
+    assert usefulness("long_term", 0) == pytest.approx(0.3)
+    assert usefulness("long_term", 0, history=True) == pytest.approx(0.5)
+
+
+def test_rank_memories_with_history_favours_long_term_equally():
+    persistent = _mem(1, memory_type="persistent")
+    long_term = _mem(2, memory_type="long_term")
+    normal = rank_memories([long_term, persistent], now=NOW)
+    assert [m["id"] for m in normal] == [1, 2]
+    history = rank_memories([long_term, persistent], now=NOW, history=True)
+    assert history[0]["score"] == pytest.approx(history[1]["score"])

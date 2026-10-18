@@ -122,3 +122,49 @@ def test_reindex_command_runs(tmp_path: Path):
     runner.invoke(app, ["memory", "add", "something"], env=env)
     result = runner.invoke(app, ["memory", "reindex"], env=env)
     assert result.exit_code in (0, 1)  # 1 only if this SQLite build lacks FTS5
+    
+
+def test_exact_duplicate_is_blocked_unless_forced(tmp_path: Path):
+    env = _env(tmp_path)
+    assert runner.invoke(app, ["memory", "add", "Uses SQLite"], env=env).exit_code == 0
+    blocked = runner.invoke(app, ["memory", "add", "uses sqlite."], env=env)
+    assert blocked.exit_code == 1
+    assert "identical" in blocked.output
+    forced = runner.invoke(app, ["memory", "add", "uses sqlite.", "--force"], env=env)
+    assert forced.exit_code == 0
+
+
+def test_supersede_hides_memory_until_all_is_requested(tmp_path: Path):
+    env = _env(tmp_path)
+    runner.invoke(app, ["memory", "add", "Storage uses JSON files"], env=env)
+    result = runner.invoke(
+        app, ["memory", "add", "Storage uses SQLite", "--supersedes", "1"], env=env
+    )
+    assert result.exit_code == 0
+    default_list = runner.invoke(app, ["memory", "list"], env=env)
+    assert "JSON" not in default_list.output
+    full_list = runner.invoke(app, ["memory", "list", "--all"], env=env)
+    assert "JSON" in full_list.output
+    assert runner.invoke(app, ["memory", "restore", "1"], env=env).exit_code == 0
+    assert "JSON" in runner.invoke(app, ["memory", "list"], env=env).output
+
+
+def test_review_on_a_healthy_database(tmp_path: Path):
+    env = _env(tmp_path)
+    runner.invoke(app, ["memory", "add", "a fresh note"], env=env)
+    result = runner.invoke(app, ["memory", "review"], env=env)
+    assert result.exit_code == 0
+    assert "Nothing to review" in result.output
+
+
+def test_bad_expiry_is_rejected(tmp_path: Path):
+    result = runner.invoke(
+        app, ["memory", "add", "x note", "--expires", "soon"], env=_env(tmp_path)
+    )
+    assert result.exit_code != 0
+
+
+def test_chat_why_before_any_question(tmp_path: Path):
+    result = runner.invoke(app, ["chat"], input="/why\n/exit\n", env=_env(tmp_path))
+    assert result.exit_code == 0
+    assert "Nothing to explain" in result.output

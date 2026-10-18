@@ -41,6 +41,7 @@ class WorkingMemory:
     task: str | None = None
     dropped_turns: int = 0
     last_prompt_tokens: int = 0
+    last_report: object | None = None #AME diagnostics, shown by /why
 
     @property
     def tokens(self) -> int:
@@ -80,3 +81,4 @@ class WorkingMemory:
         self.task = None
         self.dropped_turns = 0
         self.last_prompt_tokens = 0
+        self.last_report = None

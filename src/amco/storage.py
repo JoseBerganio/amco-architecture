@@ -23,7 +23,7 @@ import os
 import re
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -33,10 +33,12 @@ DEFAULT_DB = Path.home() / ".amco" / "amco.sqlite3"
 VALID_TYPES = ("persistent", "long_term")
 DEFAULT_CONFIDENCE = 1.0
 MAX_QUERY_TERMS = 12
+SIMILARITY_THRESHOLD = 0.6  # term overlap at which two memories count as "similar"
 
 _FIELDS = (
     "id", "content", "category", "source", "memory_type",
     "confidence", "use_count", "created_at", "updated_at",
+    "superseded_by", "superseded_at", "expires_at", "last_used_at",
 )
 _COLUMNS = ", ".join(_FIELDS)
 _FTS_COLUMNS = ", ".join(f"m.{name}" for name in _FIELDS)
@@ -45,7 +47,7 @@ STOPWORDS = frozenset("""
 a an the and or but if of to in on at by for with about as from into is are was were be been am
 do does did it its this that these those i you he she we they me my your our their what which who
 whom when where why how can could should would will shall may might must not no so than then there
-here have has had any some please tell
+here have has had any some please tell hi hello hey thanks thank ok okay
 """.split())
 
 _TOKEN_RE = re.compile(r"[^\W_]+")
@@ -89,6 +91,14 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE memories ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0")
     if "use_count" not in existing:  # Sprint 4
         conn.execute("ALTER TABLE memories ADD COLUMN use_count INTEGER NOT NULL DEFAULT 0")
+    for name, ddl in (  # Sprint 5
+        ("superseded_by", "INTEGER"),
+        ("superseded_at", "TEXT"),
+        ("expires_at", "TEXT"),
+        ("last_used_at", "TEXT"),
+    ):
+        if name not in existing:
+            conn.execute(f"ALTER TABLE memories ADD COLUMN {name} {ddl}")
     conn.execute("UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL")
 
 
@@ -144,6 +154,9 @@ def session(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+# --- Validation and status helpers -----------------------------------------
+
+
 def _check_type(memory_type: str) -> str:
     memory_type = memory_type.strip().casefold()
     if memory_type not in VALID_TYPES:
@@ -161,35 +174,96 @@ def _check_confidence(value: float) -> float:
     return value
 
 
+def _check_expiry(value: str) -> str:
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        raise ValueError("Expiry must be a date in YYYY-MM-DD format.") from None
+
+
+def _active_sql(alias: str = "") -> str:
+    """SQL condition for memories that may be retrieved (not superseded, not expired)."""
+    p = f"{alias}." if alias else ""
+    return (
+        f"{p}superseded_by IS NULL "
+        f"AND ({p}expires_at IS NULL OR {p}expires_at >= date('now'))"
+    )
+
+
+def memory_status(memory: dict[str, Any], today: str | None = None) -> str:
+    """Return 'superseded', 'expired' or 'active'."""
+    if memory.get("superseded_by") is not None:
+        return "superseded"
+    expires = memory.get("expires_at")
+    if expires and expires < (today or datetime.now(timezone.utc).date().isoformat()):
+        return "expired"
+    return "active"
+
+
+def _require_supersedable(conn: sqlite3.Connection, old_id: int) -> None:
+    row = conn.execute(
+        "SELECT superseded_by FROM memories WHERE id = ?", (old_id,)
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"No memory found with ID #{old_id}.")
+    if row["superseded_by"] is not None:
+        raise ValueError(f"Memory #{old_id} is already superseded by #{row['superseded_by']}.")
+
+
+# --- CRUD ------------------------------------------------------------------
+
+
 def add_memory(
     content: str,
     category: str = "general",
     memory_type: str = "persistent",
     db_path: Path | None = None,
     confidence: float = DEFAULT_CONFIDENCE,
+    expires_at: str | None = None,
+    supersedes: int | None = None,
 ) -> int:
+    """Save a memory. If `supersedes` is given, the older memory is replaced atomically."""
     content = content.strip()
     if not content:
         raise ValueError("Memory content cannot be empty.")
     memory_type = _check_type(memory_type)
     confidence = _check_confidence(confidence)
+    expires = _check_expiry(expires_at) if expires_at else None
     with session(db_path) as conn:
+        if supersedes is not None:
+            _require_supersedable(conn, supersedes)
         cur = conn.execute(
-            """INSERT INTO memories(content, category, source, memory_type, confidence, updated_at)
-               VALUES (?, ?, 'user', ?, ?, CURRENT_TIMESTAMP)""",
-            (content, category.strip() or "general", memory_type, confidence),
+            """INSERT INTO memories(content, category, source, memory_type, confidence,
+                                    expires_at, updated_at)
+               VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)""",
+            (content, category.strip() or "general", memory_type, confidence, expires),
         )
-        return int(cur.lastrowid)
+        new_id = int(cur.lastrowid)
+        if supersedes is not None:
+            conn.execute(
+                "UPDATE memories SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP "
+                "WHERE id = ?",
+                (new_id, supersedes),
+            )
+        return new_id
 
 
 def list_memories(
-    db_path: Path | None = None, memory_type: str | None = None
+    db_path: Path | None = None,
+    memory_type: str | None = None,
+    include_inactive: bool = False,
 ) -> list[dict[str, Any]]:
+    """List memories, newest first. Superseded and expired ones are hidden unless asked for."""
     query = f"SELECT {_COLUMNS} FROM memories"
-    params: tuple = ()
+    clauses: list[str] = []
+    params: list[Any] = []
     if memory_type is not None:
-        query += " WHERE memory_type = ?"
-        params = (_check_type(memory_type),)
+        clauses.append("memory_type = ?")
+        params.append(_check_type(memory_type))
+    if not include_inactive:
+        clauses.append(_active_sql())
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
     query += " ORDER BY id DESC"
     with session(db_path) as conn:
         rows = conn.execute(query, params).fetchall()
@@ -211,8 +285,12 @@ def update_memory(
     memory_type: str | None = None,
     db_path: Path | None = None,
     confidence: float | None = None,
+    expires_at: str | None = None,
 ) -> bool:
-    """Update the given fields. Returns False if the memory does not exist."""
+    """Update the given fields. Returns False if the memory does not exist.
+
+    For `expires_at`, pass a YYYY-MM-DD date to set it or "none" to clear it.
+    """
     fields: dict[str, Any] = {}
     if content is not None:
         content = content.strip()
@@ -225,8 +303,13 @@ def update_memory(
         fields["memory_type"] = _check_type(memory_type)
     if confidence is not None:
         fields["confidence"] = _check_confidence(confidence)
+    if expires_at is not None:
+        text = expires_at.strip()
+        fields["expires_at"] = None if text.casefold() in {"", "none", "never"} else _check_expiry(text)
     if not fields:
-        raise ValueError("Nothing to update. Provide content, category, type, or confidence.")
+        raise ValueError(
+            "Nothing to update. Provide content, category, type, confidence, or expiry."
+        )
 
     assignments = ", ".join(f"{name} = ?" for name in fields)
     with session(db_path) as conn:
@@ -238,9 +321,101 @@ def update_memory(
 
 
 def delete_memory(memory_id: int, db_path: Path | None = None) -> bool:
+    """Delete a memory. Memories it had replaced are re-pointed to its own replacement,
+    or revived if it had none, so a dangling link can never hide a memory forever."""
     with session(db_path) as conn:
-        cur = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        row = conn.execute(
+            "SELECT superseded_by FROM memories WHERE id = ?", (memory_id,)
+        ).fetchone()
+        if row is None:
+            return False
+        successor = row["superseded_by"]
+        conn.execute(
+            """UPDATE memories
+               SET superseded_by = ?,
+                   superseded_at = CASE WHEN ? IS NULL THEN NULL ELSE superseded_at END
+               WHERE superseded_by = ?""",
+            (successor, successor, memory_id),
+        )
+        conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        return True
+
+
+def supersede_memory(old_id: int, new_id: int, db_path: Path | None = None) -> bool:
+    """Mark `old_id` as replaced by `new_id`. Returns False if `old_id` does not exist."""
+    if old_id == new_id:
+        raise ValueError("A memory cannot supersede itself.")
+    with session(db_path) as conn:
+        new = conn.execute(
+            "SELECT superseded_by FROM memories WHERE id = ?", (new_id,)
+        ).fetchone()
+        if new is None:
+            raise ValueError(f"No memory found with ID #{new_id}.")
+        if new["superseded_by"] is not None:
+            raise ValueError(
+                f"Memory #{new_id} is itself superseded; use its replacement instead."
+            )
+        old = conn.execute(
+            "SELECT superseded_by FROM memories WHERE id = ?", (old_id,)
+        ).fetchone()
+        if old is None:
+            return False
+        if old["superseded_by"] is not None:
+            raise ValueError(f"Memory #{old_id} is already superseded by #{old['superseded_by']}.")
+        conn.execute(
+            "UPDATE memories SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (new_id, old_id),
+        )
+        return True
+
+
+def restore_memory(memory_id: int, db_path: Path | None = None) -> bool:
+    """Undo supersession. Returns False if the memory does not exist."""
+    with session(db_path) as conn:
+        cur = conn.execute(
+            "UPDATE memories SET superseded_by = NULL, superseded_at = NULL WHERE id = ?",
+            (memory_id,),
+        )
         return cur.rowcount > 0
+
+
+# --- Duplicates ------------------------------------------------------------
+
+
+def normalize_content(text: str) -> str:
+    """Case, whitespace and trailing punctuation do not make a memory different."""
+    return " ".join(text.casefold().split()).rstrip(".!? ")
+
+
+def term_similarity(a: str, b: str) -> float:
+    """Jaccard overlap (0 to 1) of the meaningful terms of two texts."""
+    terms_a, terms_b = set(extract_terms(a)), set(extract_terms(b))
+    if not terms_a or not terms_b:
+        return 0.0
+    return len(terms_a & terms_b) / len(terms_a | terms_b)
+
+
+def check_duplicates(
+    content: str,
+    db_path: Path | None = None,
+    threshold: float = SIMILARITY_THRESHOLD,
+    max_similar: int = 3,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """Return (exact duplicate or None, similar active memories, best first)."""
+    key = normalize_content(content)
+    if not key:
+        return None, []
+    exact: dict[str, Any] | None = None
+    similar: list[dict[str, Any]] = []
+    for memory in list_memories(db_path):
+        if normalize_content(memory["content"]) == key:
+            exact = exact or memory
+            continue
+        similarity = term_similarity(content, memory["content"])
+        if similarity >= threshold:
+            similar.append({**memory, "similarity": similarity})
+    similar.sort(key=lambda m: m["similarity"], reverse=True)
+    return exact, similar[:max_similar]
 
 
 # --- Retrieval -------------------------------------------------------------
@@ -276,7 +451,7 @@ def _keyword_candidates(terms: list[str], pool: int, db_path: Path | None) -> li
 def search_candidates(
     query: str, pool: int = 20, db_path: Path | None = None
 ) -> list[dict[str, Any]]:
-    """Retrieve unranked candidates, each with a positive `match_score` (higher = better)."""
+    """Retrieve unranked, active candidates, each with a positive `match_score`."""
     terms = extract_terms(query, limit=MAX_QUERY_TERMS)
     if not terms:
         return []
@@ -288,7 +463,7 @@ def search_candidates(
                                -bm25(memories_fts, 1.0, 0.5) AS match_score
                         FROM memories_fts
                         JOIN memories m ON m.id = memories_fts.rowid
-                        WHERE memories_fts MATCH ?
+                        WHERE memories_fts MATCH ? AND {_active_sql('m')}
                         ORDER BY match_score DESC
                         LIMIT ?""",
                     (_fts_match(terms), pool),
@@ -304,21 +479,26 @@ def search_memories(
     limit: int = 5,
     db_path: Path | None = None,
     now: datetime | None = None,
+    history: bool = False,
 ) -> list[dict[str, Any]]:
-    """Full-text search, re-ranked by relevance, confidence, freshness and usefulness."""
+    """Full-text search over active memories, re-ranked by the Sprint 4 formula.
+
+    `history=True` stops long-term memories being demoted (used for questions about the past).
+    """
     limit = max(1, limit)
     candidates = search_candidates(query, pool=max(limit * 4, 20), db_path=db_path)
-    return rank_memories(candidates, now=now)[:limit]
+    return rank_memories(candidates, now=now, history=history)[:limit]
 
 
 def record_usage(memory_ids: Iterable[int], db_path: Path | None = None) -> None:
-    """Count one use for each memory that was sent to the model."""
+    """Count one use (and stamp the time) for each memory that was sent to the model."""
     ids = sorted({int(i) for i in memory_ids})
     if not ids:
         return
     with session(db_path) as conn:
         conn.executemany(
-            "UPDATE memories SET use_count = use_count + 1 WHERE id = ?",
+            "UPDATE memories SET use_count = use_count + 1, last_used_at = CURRENT_TIMESTAMP "
+            "WHERE id = ?",
             [(i,) for i in ids],
         )
 

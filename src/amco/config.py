@@ -34,6 +34,9 @@ DEFAULT_FRESHNESS_HALF_LIFE_DAYS = 180.0
 DEFAULT_FOLLOWUP_MIN_TERMS = 3
 DEFAULT_FOLLOWUP_TURNS = 2
 
+DEFAULT_STALE_DAYS = 90
+DEFAULT_PROMOTE_USES = 5
+DEFAULT_SUPERSEDED_RETENTION_DAYS = 30
 
 def model_name() -> str:
     return os.getenv("AMCO_MODEL", DEFAULT_MODEL)
@@ -80,3 +83,13 @@ def followup_settings() -> tuple[int, int]:
         int_env("AMCO_FOLLOWUP_MIN_TERMS", DEFAULT_FOLLOWUP_MIN_TERMS),
         int_env("AMCO_FOLLOWUP_TURNS", DEFAULT_FOLLOWUP_TURNS),
     )
+    
+
+def lifecycle_settings() -> tuple[int, int, int]:
+    """Return (idle days before archiving, uses before promotion, days to keep superseded memories)."""
+    return (
+        int_env("AMCO_STALE_DAYS", DEFAULT_STALE_DAYS),
+        int_env("AMCO_PROMOTE_USES", DEFAULT_PROMOTE_USES),
+        int_env("AMCO_SUPERSEDED_RETENTION_DAYS", DEFAULT_SUPERSEDED_RETENTION_DAYS),
+    )    
+    

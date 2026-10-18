@@ -49,7 +49,7 @@ def weights_from_env() -> RankingWeights:
     )
 
 
-def _parse_timestamp(value: Any) -> datetime | None:
+def parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None
     try:
@@ -61,15 +61,15 @@ def _parse_timestamp(value: Any) -> datetime | None:
 
 def freshness(updated_at: Any, now: datetime, half_life_days: float) -> float:
     """1.0 for brand-new memories, 0.5 after one half-life. Unknown dates score 0.5."""
-    stamp = _parse_timestamp(updated_at)
+    stamp = parse_timestamp(updated_at)
     if stamp is None:
         return 0.5
     age_days = max(0.0, (now - stamp).total_seconds() / 86400)
     return 0.5 ** (age_days / half_life_days)
 
 
-def usefulness(memory_type: str, use_count: int) -> float:
-    prior = TYPE_PRIORS.get(memory_type, 0.5)
+def usefulness(memory_type: str, use_count: int, history: bool = False) -> float:
+    prior = 1.0 if history else TYPE_PRIORS.get(memory_type, 0.5)
     usage = min(1.0, math.log1p(max(0, int(use_count or 0))) / math.log1p(USAGE_CAP))
     return 0.5 * prior + 0.5 * usage
 
@@ -78,6 +78,7 @@ def rank_memories(
     candidates: list[dict[str, Any]],
     weights: RankingWeights | None = None,
     now: datetime | None = None,
+    history: bool = False,
 ) -> list[dict[str, Any]]:
     """Score and sort candidates (best first).
 
@@ -98,7 +99,7 @@ def rank_memories(
             "relevance": match / best_match if best_match > 0 else 1.0,
             "confidence": min(1.0, max(0.0, float(c.get("confidence", 1.0)))),
             "freshness": freshness(c.get("updated_at"), now, half_life),
-            "usefulness": usefulness(c.get("memory_type", "persistent"), c.get("use_count", 0)),
+            "usefulness": usefulness(c.get("memory_type", "persistent"), c.get("use_count", 0), history),
         }
         score = (
             weights.relevance * parts["relevance"]
