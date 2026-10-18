@@ -2,7 +2,7 @@
 
 Running log of what has been built, changed, and verified in each sprint.
 Project: **AMCO (Adaptive Memory Controller)** — a local-first memory orchestration layer for local LLMs.
-Last updated: 2026-10-15
+Last updated: 2026-10-18
 
 ## Status at a glance
 
@@ -12,8 +12,9 @@ Last updated: 2026-10-15
 | 2 | SQLite storage and basic memory commands | Done |
 | 3 | Working Memory, context budgeting, and local model setup | Done |
 | 4 | Full-text search and ranking | Done |
+| 5 | Adaptive Memory Engine (AME), memory hygiene, and lifecycle review | Done |
 
-Current release: `0.1.0` (published). The 0.2 series is in development; the version string stays at `0.1.0` until the 0.2.0 release.
+Current release: `0.2.0`. The 0.5 series is in planning.
 Default model: `qwen2.5:3b` (4-bit quantized) via Ollama
 
 ---
@@ -227,6 +228,75 @@ The starter went slightly beyond the original "foundation only" scope and produc
 
 ____
 
+## Sprint 5 — Adaptive Memory Engine, memory hygiene, and lifecycle review (0.2 series)
+
+**Goal:** connect task analysis, retrieval, ranking, conflict handling, context budgeting, and memory lifecycle management into one orchestration pipeline (Phase 5), with duplicate handling, supersession, and expiry as its conflict-handling and lifecycle stages.
+
+### Added
+
+- **AME module** (`src/amco/ame.py`): the pipeline `analyze → retrieve → resolve → budget → assemble → model call → finish`. The AME is plain software, not a language model. The model call itself stays in `engine.py` so the adapter can be swapped later.
+- **Task analysis** (`analyze_task()`): rule-based classification into `chitchat`, `followup`, `instruction`, `question`, or `statement`, plus detection of history cues ("last time", "we decided", "earlier").
+  - Greetings and thanks skip retrieval entirely.
+  - Retrieval depth is 5 by default and 8 when the message has history cues or a task is pinned with `/task`.
+  - Thin messages borrow the pinned task first, then recent user turns (extends the Sprint 4 follow-up rule).
+- **History-aware ranking:** with history cues, long-term memories are no longer demoted by the usefulness prior. Nothing is filtered out; only the ranking changes.
+- **Retrieval-time conflict handling:**
+  - Candidates whose content is identical to a higher-ranked one are dropped before budgeting.
+  - Selected memories that overlap (term similarity of at least 0.6) get a conflict note in the prompt naming the preferred memory (higher confidence, then more recently updated, then newer ID). At most 2 notes. The note is worded as "may disagree", because overlap cannot prove a contradiction.
+- **Diagnostics:** every call stores a `ContextReport` on Working Memory, and `/why` in chat shows the task kind, search text, candidates with scores, selected and skipped memories (with reasons), conflicts, memory and prompt token use, turns dropped, and timings.
+- **Write-time duplicate checks** (at the user-facing boundary, in `memory add` and `/remember`): exact duplicates (ignoring case, whitespace, and trailing punctuation) are blocked unless `--force`; near-duplicates only produce a warning with a hint to run `amco memory supersede`.
+- **Supersession:** `superseded_by` and `superseded_at` columns. `amco memory supersede <old> <new>`, `amco memory restore <id>`, and `amco memory add --supersedes <id>` (atomic). Superseded memories are kept and inspectable but hidden from search, chat, and the default list. `amco memory list --all` shows everything with a status column.
+- **Expiry:** `--expires YYYY-MM-DD` on `memory add` and `memory update` (`none` clears it). The date is the last valid day. Expired memories are hidden from retrieval but never deleted automatically.
+- **Usage timestamp:** new `last_used_at` column, set whenever a memory is sent to the model.
+- **Lifecycle review** (`src/amco/lifecycle.py`, `amco memory review [--apply] [--yes]`): suggests changes and applies them only with `--apply`.
+  - Delete expired memories.
+  - Delete superseded memories after the retention period (30 days).
+  - Supersede exact duplicates in favor of the most trusted copy.
+  - Archive persistent memories idle for 90 days to long-term.
+  - Promote long-term memories used at least 5 times and still active to persistent.
+- **Configuration:** `AMCO_STALE_DAYS`, `AMCO_PROMOTE_USES`, `AMCO_SUPERSEDED_RETENTION_DAYS`.
+- **Schema migration:** databases from earlier versions gain `superseded_by`, `superseded_at`, `expires_at`, and `last_used_at` automatically.
+
+### Changed
+
+- `engine.py` is now a thin wrapper over the AME. `answer()`, `select_memories()`, and `retrieval_query()` keep their names and behavior.
+- `search_memories()` and `list_memories()` hide superseded and expired memories by default (`include_inactive=True` shows them). `search_memories()` accepts `history=`.
+- `ranking.parse_timestamp()` is now public; `usefulness()` and `rank_memories()` accept `history`.
+- `WorkingMemory` gains `last_report`, which `clear()` resets.
+- `delete_memory()` repairs supersession links: memories the deleted one had replaced are re-pointed to its own replacement, or revived if it had none.
+- `add_memory()` stays permissive (no duplicate blocking), so the low-level storage API is unchanged for callers and tests. `add_memory()` and `update_memory()` accept `expires_at`; `add_memory()` accepts `supersedes`.
+- Stopwords now include common greetings (hi, hello, hey, thanks, ok).
+- `memory inspect` shows status, last-used time, and expiry.
+
+### Tests
+
+- Added `tests/test_hygiene.py` (12 tests), `tests/test_ame.py` (12 tests), and `tests/test_lifecycle.py` (7 tests).
+- Added 2 ranking tests (history flag) and 5 CLI tests (duplicate blocking, supersede/restore/`--all`, review, bad expiry, `/why`).
+- Total after Sprint 5: 105 tests, none of which need Ollama.
+
+### Acceptance criteria
+
+1. Every chat message goes through the AME pipeline, and `/why` explains the result.
+2. Greetings skip retrieval; short follow-ups and pinned tasks improve retrieval.
+3. Identical memories are blocked on add (unless `--force`) and dropped at retrieval time.
+4. Overlapping memories are surfaced to the model with a precedence note.
+5. A superseded memory is hidden from retrieval but kept, inspectable, and restorable.
+6. An expired memory is hidden from retrieval but not deleted.
+7. `amco memory review` reports lifecycle suggestions and changes nothing without `--apply`.
+8. Older databases migrate automatically.
+9. Tests pass without Ollama.
+
+**Verification:** `pytest` passed in full, and the hygiene, `/why`, and review flows were run manually.
+
+### Notes from this sprint
+
+- Conflict detection is a term-overlap heuristic; it cannot tell a contradiction from a complementary fact.
+- The task classifier is rule-based and English-only. Its effects are limited to retrieval depth and whether to skip retrieval.
+- Duplicate checks scan all active memories, which is fine at prototype scale.
+- `review` does not flag near-duplicates; those are only warned about at write time.
+
+---
+
 ## Current command reference
 
 | Command | Purpose |
@@ -234,17 +304,18 @@ ____
 | `amco version` | Show the version |
 | `amco init` | Create the workspace and database |
 | `amco chat` | Interactive chat with Working Memory and memory retrieval |
-| `amco memory add "text" [-c category] [-t type] [--confidence 0-1]` | Save a memory |
-| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...]` | Edit a memory |
+| `amco memory add "text" [-c category] [-t type] [--confidence 0-1] [--expires DATE] [--supersedes ID] [--force]` | Save a memory (blocks exact duplicates unless `--force`) |
+| `amco memory list [-t type] [--all]` | List active memories (`--all` includes superseded and expired) |
+| `amco memory inspect <id>` | Show one memory in full |
+| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...] [--expires DATE\|none]` | Edit a memory |
+| `amco memory supersede <old-id> <new-id>` | Replace a memory with another (old one is hidden, not deleted) |
+| `amco memory restore <id>` | Bring a superseded memory back |
+| `amco memory review [--apply] [--yes]` | Suggest (or apply) lifecycle changes |
 | `amco memory search "words" [--limit N] [--explain]` | Ranked full-text search |
 | `amco memory reindex` | Rebuild the search index |
-| `amco memory list [-t type]` | List memories |
-| `amco memory inspect <id>` | Show one memory in full |
-| `amco memory update <id> [--content ...] [-c ...] [-t ...]` | Edit a memory |
-| `amco memory search "words" [--limit N]` | Keyword search |
 | `amco memory delete <id> [--yes]` | Delete a memory |
 
-**Chat commands:** `/task`, `/remember`, `/status`, `/clear`, `/help`, `/exit`
+**Chat commands:** `/task`, `/remember`, `/why`, `/status`, `/clear`, `/help`, `/exit`
 
 ## Configuration
 
@@ -264,24 +335,32 @@ ____
 | `AMCO_FRESHNESS_HALF_LIFE_DAYS` | `180` | Days for the freshness score to halve |
 | `AMCO_FOLLOWUP_MIN_TERMS` | `3` | Fewer meaningful terms than this triggers history-aware retrieval |
 | `AMCO_FOLLOWUP_TURNS` | `2` | User turns borrowed for follow-up retrieval |
+| `AMCO_STALE_DAYS` | `90` | Idle days before `review` suggests archiving a persistent memory |
+| `AMCO_PROMOTE_USES` | `5` | Uses before `review` suggests promoting a long-term memory |
+| `AMCO_SUPERSEDED_RETENTION_DAYS` | `30` | Days a superseded memory is kept before `review` suggests deleting it |
 
 ## Project structure
 
 ```
 src/amco/
 ├── __init__.py
+├── ame.py        # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
 ├── cli.py        # Typer commands and chat loop
 ├── config.py     # Environment-based settings
-├── engine.py     # Retrieval query, memory selection, prompt assembly
+├── engine.py     # Public answer() entry point (wraps the AME and the model call)
+├── lifecycle.py  # Memory review: expiry, supersession, archive, promote
 ├── model.py      # Ollama adapter
-├── ranking.py    # Scoring formula (relevance, confidence, freshness, usefulness)
-├── storage.py    # SQLite storage, FTS5 index, migration, search
+├── ranking.py    # Scoring formula
+├── storage.py    # SQLite storage, FTS5 index, migration, search, supersession
 └── working.py    # Working Memory and token estimation
 tests/
+├── test_ame.py
 ├── test_cli.py
 ├── test_engine.py
 ├── test_engine_context.py
 ├── test_engine_retrieval.py
+├── test_hygiene.py
+├── test_lifecycle.py
 ├── test_model.py
 ├── test_ranking.py
 ├── test_search.py
@@ -292,22 +371,44 @@ tests/
 ## Known gaps (deferred to later sprints)
 
 - No semantic (embedding) search; FTS5 matches words and their stems, not meaning.
-- Follow-up retrieval uses only recent user turns, not assistant replies.
-- Ranking weights are untuned defaults; there is no evaluation set yet.
-- Persistent vs. long-term is a label plus a small usefulness prior; no lifecycle rules or automatic promotion.
-- No supersession, expiry, or provenance beyond `source`; confidence is set manually.
-- No conflict detection or deduplication.
-- No summarization of dropped turns.
-- No automatic memory evaluation; memories are saved only by explicit command.
-- Token counts are an estimate, not a real tokenizer.
+- The model adapter is a single function, not yet a base interface.
 - No `models`, `stats`, or `config` commands, and no TOML configuration.
-- Model adapter is a single function, not yet a base interface.
+- No retrieval metrics or evaluation set; ranking weights are untuned defaults.
+- Conflict detection is a term-overlap heuristic and cannot confirm contradictions.
+- The task classifier is rule-based and English-only.
+- Follow-up retrieval uses only user turns and the pinned task, not assistant replies.
+- No summarization of dropped turns.
+- No automatic memory evaluation; memories are saved only by explicit command (`add`, `/remember`).
+- `review` does not flag near-duplicates, and confidence is set manually.
+- Token counts are an estimate, not a real tokenizer.
+- No backup, export, or import commands.
 
 ---
 
-## Up next
+## Release 0.2.0
 
-Sprint 5 is not yet planned. Candidates from the roadmap: memory lifecycle rules (promotion, supersession, expiry), conflict detection and deduplication, and a model adapter interface. Semantic retrieval should wait until there is a baseline to measure it against.
+Sprints 4 and 5 conclude the 0.2.0 release.
+
+- Full-text search (FTS5) with a keyword fallback, and an explainable ranking formula (relevance, confidence, freshness, usefulness).
+- The Adaptive Memory Engine pipeline, with `/why` diagnostics.
+- Memory hygiene (duplicates, supersession, expiry) and `amco memory review`.
+- Tagged `v0.2.0`. The version string is `0.2.0`.
+- **Upgrading from 0.1.x:** the database migrates automatically on first use, but the migration is one-way. Copy `~/.amco/amco.sqlite3` before upgrading if you want a rollback.
+
+---
+
+## Up next — 0.5 series (draft plan, to be confirmed)
+
+**Theme:** model independence and measurement (Phases 6 and 7). The idea is to measure retrieval quality before adding semantic search.
+
+| Sprint | Focus |
+|--------|-------|
+| 6 | Model adapter interface (base class and Ollama implementation), `amco models`, TOML configuration, `amco config` |
+| 7 | Evaluation baseline: benchmark set, retrieval metrics, `amco stats`, ranking-weight tuning |
+| 8 | Semantic retrieval behind the adapter interface, kept only if it beats the FTS5 baseline on the benchmark |
+| 9 | Reliability: backup, export and import, logging, privacy safeguards, memory proposals from chat with user approval |
+
+This plan is a proposal, not a commitment. Sprint 6 scope will be confirmed before work starts.
 
 ## Release 0.1.0
 

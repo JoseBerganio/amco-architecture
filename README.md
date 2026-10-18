@@ -2,7 +2,7 @@
 
 A local-first memory layer for local LLMs. AMCO stores information outside the model, retrieves only what is relevant to the current question, and fits it into the model's context window.
 
-**Status:** early prototype. The published release is v0.1.0; the 0.2 series is in development. The CLI, SQLite storage, full-text search with ranking, Working Memory, and Ollama integration work. Semantic search and automatic memory management are still to come.
+**Status:** early prototype (v0.2.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Semantic search and automatic memory management are still to come.
 
 ## Why AMCO
 
@@ -10,12 +10,16 @@ Local models have a limited context window and forget everything between session
 
 ## Features
 
-- **Persistent memory in SQLite**: add, list, inspect, update, search, and delete memories, with category, type (`persistent` or `long_term`), confidence, source, and timestamps.
+- **Persistent memory in SQLite**: add, list, inspect, update, search, supersede, and delete memories, with category, type (`persistent` or `long_term`), confidence, source, expiry, and timestamps.
 - **Full-text search with ranking**: SQLite FTS5 finds memories by word (with stemming), then ranks them by relevance, confidence, freshness, and usefulness. Use `--explain` to see how each result was scored.
-- **Follow-up aware retrieval**: short follow-up questions like "Is it fast?" also search using your recent messages.
+- **Adaptive Memory Engine (AME)**: every chat message goes through a pipeline that classifies the request, decides how much to retrieve, drops duplicates, flags overlapping memories, fits everything into the context budget, and builds the prompt. Greetings skip retrieval, and short follow-ups use your recent messages and pinned task. Type `/why` to see how the last answer's context was chosen.
+- **Working Memory in chat**: conversation history, a pinned task, and a token-budgeted prompt that drops the oldest turns first when the context fills up.
+- **Context budgeting**: retrieved memories are selected to fit a token budget, and a memory is skipped rather than cut short.
+- **Memory hygiene**: identical memories are blocked, similar ones are flagged, outdated memories can be superseded (hidden but kept and restorable), and memories can expire.
+- **Lifecycle review**: `amco memory review` suggests deleting expired or long-superseded memories, archiving idle ones, and promoting well-used ones. Nothing changes unless you pass `--apply`.
 - **Local model through Ollama**: defaults to Qwen 2.5 3B (4-bit quantized).
 - **Memories are treated as data, not instructions**: the system prompt tells the model not to follow instructions found inside retrieved memories.
-- **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, and delete any of them.
+- **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, supersede, and delete any of them.
 - **Tests run without Ollama**: the model is mocked in the test suite.
 
 ## Requirements
@@ -45,13 +49,22 @@ ollama pull qwen2.5:3b
 amco init
 ```
 
+### Upgrading from 0.1.x
+
+Your database upgrades automatically the first time you run any command, but the change is one-way. Copy it first if you want a rollback:
+
+```bash
+cp ~/.amco/amco.sqlite3 ~/.amco/amco.sqlite3.bak                      # macOS/Linux
+Copy-Item $HOME\.amco\amco.sqlite3 $HOME\.amco\amco.sqlite3.bak       # Windows PowerShell
+```
+
 ## Quick start
 
 ```bash
-amco memory add "AMCO uses Python and SQLite for its prototype." --type persistent
+amco memory add "My Project uses Python and SQLite for its prototype." --type persistent
 amco memory list
-amco chat
 amco memory search "storage" --explain
+amco chat
 ```
 
 Then ask something in the chat, such as `What does AMCO use for storage?`. After each answer, AMCO shows which memory IDs it retrieved.
@@ -63,12 +76,15 @@ Then ask something in the chat, such as `What does AMCO use for storage?`. After
 | `amco version` | Show the version |
 | `amco init` | Create the workspace and database |
 | `amco chat` | Interactive chat with memory retrieval |
-| `amco memory add "text" [-c category] [-t type] [--confidence 0-1]` | Save a memory |
-| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...]` | Edit a memory |
+| `amco memory add "text" [-c category] [-t type] [--confidence 0-1] [--expires DATE] [--supersedes ID] [--force]` | Save a memory (blocks exact duplicates unless `--force`) |
+| `amco memory list [-t type] [--all]` | List active memories (`--all` includes superseded and expired) |
+| `amco memory inspect <id>` | Show one memory in full |
+| `amco memory update <id> [--content ...] [-c ...] [-t ...] [--confidence ...] [--expires DATE\|none]` | Edit a memory |
+| `amco memory supersede <old-id> <new-id>` | Replace a memory with another (the old one is hidden, not deleted) |
+| `amco memory restore <id>` | Bring a superseded memory back |
+| `amco memory review [--apply] [--yes]` | Suggest (or apply) lifecycle changes |
 | `amco memory search "words" [--limit N] [--explain]` | Ranked full-text search |
 | `amco memory reindex` | Rebuild the search index |
-| `amco memory list [-t type]` | List memories |
-| `amco memory inspect <id>` | Show one memory in full |
 | `amco memory delete <id> [--yes]` | Delete a memory |
 
 ### Chat commands
@@ -80,6 +96,7 @@ Then ask something in the chat, such as `What does AMCO use for storage?`. After
 | `/task clear` | Clear the current task |
 | `/remember <text>` | Save text to Persistent Memory |
 | `/status` | Show Working Memory and context usage |
+| `/why` | Explain how the last answer's memories were chosen |
 | `/clear` | Reset Working Memory (history and task) |
 | `/help` | List chat commands |
 | `/exit` | Quit |
@@ -104,6 +121,9 @@ Settings come from environment variables.
 | `AMCO_FRESHNESS_HALF_LIFE_DAYS` | `180` | Days for the freshness score to halve |
 | `AMCO_FOLLOWUP_MIN_TERMS` | `3` | Fewer meaningful terms than this triggers history-aware retrieval |
 | `AMCO_FOLLOWUP_TURNS` | `2` | User turns borrowed for follow-up retrieval |
+| `AMCO_STALE_DAYS` | `90` | Idle days before `review` suggests archiving a persistent memory |
+| `AMCO_PROMOTE_USES` | `5` | Uses before `review` suggests promoting a long-term memory |
+| `AMCO_SUPERSEDED_RETENTION_DAYS` | `30` | Days a superseded memory is kept before `review` suggests deleting it |
 
 Ranking weights are starting defaults and have not been tuned yet.
 
@@ -127,12 +147,14 @@ The tests use temporary databases and a mocked model, so Ollama does not need to
 
 ```
 src/amco/
+├── ame.py        # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
 ├── cli.py        # Typer commands and chat loop
 ├── config.py     # Environment-based settings
-├── engine.py     # Retrieval query, memory selection, prompt assembly
+├── engine.py     # Public answer() entry point (wraps the AME and the model call)
+├── lifecycle.py  # Memory review: expiry, supersession, archive, promote
 ├── model.py      # Ollama adapter
 ├── ranking.py    # Scoring formula
-├── storage.py    # SQLite storage, FTS5 index, migration, search
+├── storage.py    # SQLite storage, FTS5 index, migration, search, supersession
 └── working.py    # Working Memory and token estimation
 tests/            # pytest suite
 ```
@@ -144,19 +166,23 @@ tests/            # pytest suite
 | 1 | Project foundation and CLI | Done |
 | 2 | SQLite storage and memory commands | Done |
 | 3 | Working Memory, context budgeting, local model | Done |
-| 4 | Full-text search and ranking | Done (0.2 series) |
+| 4 | Full-text search and ranking | Done (0.2) |
+| 5 | Adaptive Memory Engine, memory hygiene, lifecycle review | Done (0.2) |
+| 6+ | Model adapter interface, configuration file, evaluation, semantic retrieval | Planned (0.5) |
 
-Later work includes the three-tier memory lifecycle (working, persistent, long-term), semantic retrieval, conflict handling, diagnostics, and a model adapter interface. See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the detailed log.
+See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the detailed log and the draft 0.5 plan.
 
 ## Known limitations
 
 - Search matches words and their stems, not meaning; semantic search is not implemented yet.
-- Short follow-up questions borrow terms from your recent messages, but not from the model's replies.
+- Overlapping memories are flagged to the model using a term-overlap heuristic, which cannot tell a contradiction from a complementary fact.
+- The request classifier is rule-based and English-only.
+- Short follow-up questions borrow terms from your recent messages and pinned task, but not from the model's replies.
 - Ranking weights are untuned defaults.
 - Token counts are estimates (about 4 characters per token).
 - Older chat turns are dropped, not summarized.
 - Memories are never saved automatically; use `amco memory add` or `/remember`.
-- A 3B model may sometimes ignore or misuse retrieved memories. Check the retrieved IDs and scores shown after each answer to tell retrieval problems from model problems.
+- A 3B model may sometimes ignore or misuse retrieved memories. Use `/why` and the retrieved IDs shown after each answer to tell retrieval problems from model problems.
 
 ## Privacy
 
