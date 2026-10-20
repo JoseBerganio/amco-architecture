@@ -26,11 +26,11 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from .config import model_name
-from . import __version__
-from .engine import answer, context_settings
-from .lifecycle import apply_finding, review
-from .storage import (
+from ..config import model_name
+from .. import __version__
+from ..engine import answer, context_settings
+from ..lifecycle import apply_finding, review
+from ..storage import (
     VALID_TYPES,
     add_memory,
     check_duplicates,
@@ -46,7 +46,7 @@ from .storage import (
     supersede_memory,
     update_memory,
 )
-from .working import WorkingMemory
+from ..working import WorkingMemory
 
 
 app = typer.Typer(help="AMCO — Adaptive Memory Controller", no_args_is_help=True)
