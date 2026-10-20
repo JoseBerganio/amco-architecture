@@ -30,6 +30,8 @@ from ..config import model_name
 from .. import __version__
 from ..engine import answer, context_settings
 from ..lifecycle import apply_finding, review
+from .common import CONFIDENCE_HELP, TYPE_HELP, _status_label, console, err_console
+from .system import init, version
 from ..storage import (
     VALID_TYPES,
     add_memory,
@@ -52,36 +54,15 @@ from ..working import WorkingMemory
 app = typer.Typer(help="AMCO — Adaptive Memory Controller", no_args_is_help=True)
 memory_app = typer.Typer(help="Manage stored memories.", no_args_is_help=True)
 app.add_typer(memory_app, name="memory")
-console = Console()
-err_console = Console(stderr=True)
 
-TYPE_HELP = f"Memory type: {' or '.join(VALID_TYPES)}."
-CONFIDENCE_HELP = "Confidence from 0 to 1 (1 = confirmed)."
-
-
-def _status_label(item: dict) -> str:
-    status = memory_status(item)
-    return f"superseded by #{item['superseded_by']}" if status == "superseded" else status
 
 
 @app.callback()
 def main() -> None:
     """AMCO local-first memory orchestration prototype."""
-
-
-@app.command()
-def version() -> None:
-    """Show AMCO version."""
-    console.print(f"AMCO {__version__}")
-
-
-@app.command()
-def init() -> None:
-    """Initialize the local workspace and SQLite database."""
-    path = database_path()
-    with session(path):
-        pass
-    console.print(f"[green]AMCO initialized.[/green] Database: {path}")
+    
+app.command()(version)
+app.command()(init)
 
 
 @memory_app.command("add")
