@@ -19,50 +19,22 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
-from rich.console import Console
-from rich.markup import escape
-from rich.table import Table
 
-from ..config import model_name
-from .. import __version__
-from ..engine import answer, context_settings
-from ..lifecycle import apply_finding, review
-from .common import CONFIDENCE_HELP, TYPE_HELP, _status_label, console, err_console
-from .system import init, version
-from .memory import memory_app
+from ..engine import answer
 from .chat import run_chat
-from ..storage import (
-    VALID_TYPES,
-    add_memory,
-    check_duplicates,
-    database_path,
-    delete_memory,
-    get_memory,
-    list_memories,
-    memory_status,
-    rebuild_index,
-    restore_memory,
-    search_memories,
-    session,
-    supersede_memory,
-    update_memory,
-)
-from ..working import WorkingMemory
-
+from .memory import memory_app
+from .system import init, version
 
 app = typer.Typer(help="AMCO — Adaptive Memory Controller", no_args_is_help=True)
-
 app.add_typer(memory_app, name="memory")
-
 
 
 @app.callback()
 def main() -> None:
     """AMCO local-first memory orchestration prototype."""
-    
+
+
 app.command()(version)
 app.command()(init)
 
