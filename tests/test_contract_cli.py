@@ -21,6 +21,8 @@
 
 The tree is compared structurally (names, order, options, defaults, help text),
 not as rendered help, so terminal width and Rich versions do not matter.
+It reads the command objects by attribute only, so it works whether or not the
+installed Typer depends on a separate `click` package.
 
 Regenerate the snapshot ONLY from v0.2.0 code:  python tests/test_contract_cli.py
 """
@@ -28,7 +30,6 @@ Regenerate the snapshot ONLY from v0.2.0 code:  python tests/test_contract_cli.p
 import json
 from pathlib import Path
 
-import click
 import typer
 
 from amco.cli import app
@@ -43,7 +44,7 @@ def _plain(value):
     return None
 
 
-def _param(param: click.Parameter) -> dict:
+def _param(param) -> dict:
     return {
         "kind": param.param_type_name,
         "name": param.name,
@@ -59,18 +60,15 @@ def _param(param: click.Parameter) -> dict:
     }
 
 
-def _command(cmd: click.Command, name: str | None = None) -> dict:
+def _command(cmd, name: str | None = None) -> dict:
     info = {
         "name": name or cmd.name,
         "help": cmd.help,
         "params": [_param(p) for p in cmd.params],
     }
-    # Duck-typed on purpose: Typer's group class is not always a click.Group subclass,
-    # and click.MultiCommand is deprecated. Anything with `.commands` is a group.
-    subcommands = getattr(cmd, "commands", None)
-    if subcommands is not None:
-        info["no_args_is_help"] = bool(getattr(cmd, "no_args_is_help", False))
-        info["commands"] = [_command(c) for c in subcommands.values()]
+    if hasattr(cmd, "commands"):  # a command group
+        info["no_args_is_help"] = bool(cmd.no_args_is_help)
+        info["commands"] = [_command(c) for c in cmd.commands.values()]
     return info
 
 

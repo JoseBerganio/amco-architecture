@@ -6,3 +6,5 @@ __pycache__/
 .env
 *.sqlite3
 SPRINT.md
+build/
+dist/
