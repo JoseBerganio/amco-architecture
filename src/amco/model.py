@@ -1,68 +1,11 @@
-# SPDX-License-Identifier: GPL-2.0-or-later
-#
-# AMCO — Adaptive Memory Controller
-# Copyright (C) 2026  Jose Berganio
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, see
-# <https://www.gnu.org/licenses/>.
+"""Compatibility shim, removed in Sprint 9. New code should use amco.models.OllamaChat."""
 
 from __future__ import annotations
 
-import httpx
+import httpx  # noqa: F401  (existing tests patch model.httpx.post)
 
-from .config import (
-    DEFAULT_TIMEOUT_SECONDS,
-    context_settings,
-    int_env,
-    model_name,
-    ollama_url,
-)
+from .models.ollama import OllamaChat
 
 
 def ollama_chat(messages: list[dict[str, str]], timeout: float | None = None) -> str:
-    base_url = ollama_url()
-    model = model_name()
-    context_limit, _, _ = context_settings()
-    if timeout is None:
-        timeout = float(int_env("AMCO_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
-
-    payload = {
-        "model": model,
-        "messages": messages,
-        "stream": False,
-        "options": {"num_ctx": context_limit},
-    }
-    try:
-        response = httpx.post(f"{base_url}/api/chat", json=payload, timeout=timeout)
-        response.raise_for_status()
-    except httpx.ConnectError as exc:
-        raise RuntimeError(
-            f"Cannot connect to Ollama at {base_url}. Start Ollama and confirm it is running."
-        ) from exc
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 404:
-            raise RuntimeError(
-                f"Model '{model}' was not found. Run: ollama pull {model}"
-            ) from exc
-        detail = exc.response.text[:500]
-        raise RuntimeError(
-            f"Ollama returned HTTP {exc.response.status_code}: {detail}"
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise RuntimeError(f"Ollama request failed: {exc}") from exc
-
-    try:
-        return response.json()["message"]["content"]
-    except (ValueError, KeyError, TypeError) as exc:
-        raise RuntimeError("Ollama returned an unexpected response format.") from exc
+    return OllamaChat().chat(messages, timeout=timeout)
