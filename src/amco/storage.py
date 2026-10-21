@@ -17,9 +17,10 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
+# continue on the sprint 7
+
 from __future__ import annotations
 
-import os
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -27,9 +28,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
+from .config import DEFAULT_DB, database_path  # noqa: F401  (re-exported, part of the public surface)
 from .ranking import rank_memories
 
-DEFAULT_DB = Path.home() / ".amco" / "amco.sqlite3"
+VALID_TYPES = ("persistent", "long_term")
+
+from .ranking import rank_memories
+
+
 VALID_TYPES = ("persistent", "long_term")
 DEFAULT_CONFIDENCE = 1.0
 MAX_QUERY_TERMS = 12
@@ -51,11 +57,6 @@ here have has had any some please tell hi hello hey thanks thank ok okay
 """.split())
 
 _TOKEN_RE = re.compile(r"[^\W_]+")
-
-
-def database_path() -> Path:
-    raw = os.getenv("AMCO_DB_PATH")
-    return Path(raw).expanduser() if raw else DEFAULT_DB
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
