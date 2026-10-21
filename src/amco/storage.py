@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -58,11 +57,6 @@ here have has had any some please tell hi hello hey thanks thank ok okay
 """.split())
 
 _TOKEN_RE = re.compile(r"[^\W_]+")
-
-
-def database_path() -> Path:
-    raw = os.getenv("AMCO_DB_PATH")
-    return Path(raw).expanduser() if raw else DEFAULT_DB
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:

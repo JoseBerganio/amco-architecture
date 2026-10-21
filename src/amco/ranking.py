@@ -29,7 +29,6 @@ from .config import (
     DEFAULT_WEIGHT_FRESHNESS,
     DEFAULT_WEIGHT_RELEVANCE,
     DEFAULT_WEIGHT_USEFULNESS,
-    float_env,
     freshness_half_life_days,
     ranking_weight_settings,
 )
