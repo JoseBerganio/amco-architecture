@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import math
 import os
+from pathlib import Path
 
 DEFAULT_MODEL = "qwen2.5:3b"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
@@ -37,6 +38,14 @@ DEFAULT_FOLLOWUP_TURNS = 2
 DEFAULT_STALE_DAYS = 90
 DEFAULT_PROMOTE_USES = 5
 DEFAULT_SUPERSEDED_RETENTION_DAYS = 30
+
+DEFAULT_DB = Path.home() / ".amco" / "amco.sqlite3"
+DEFAULT_PROVIDER = "ollama"
+
+DEFAULT_WEIGHT_RELEVANCE = 0.65
+DEFAULT_WEIGHT_CONFIDENCE = 0.15
+DEFAULT_WEIGHT_FRESHNESS = 0.05
+DEFAULT_WEIGHT_USEFULNESS = 0.15
 
 def model_name() -> str:
     return os.getenv("AMCO_MODEL", DEFAULT_MODEL)
@@ -93,3 +102,27 @@ def lifecycle_settings() -> tuple[int, int, int]:
         int_env("AMCO_SUPERSEDED_RETENTION_DAYS", DEFAULT_SUPERSEDED_RETENTION_DAYS),
     )    
     
+    
+def database_path() -> Path:
+    raw = os.getenv("AMCO_DB_PATH")
+    return Path(raw).expanduser() if raw else DEFAULT_DB
+
+
+def timeout_seconds() -> float:
+    """Model request timeout in seconds."""
+    return float(int_env("AMCO_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
+
+
+def provider_name() -> str:
+    """Which model adapter to use (AMCO_PROVIDER, default 'ollama')."""
+    return os.getenv("AMCO_PROVIDER", "").strip().casefold() or DEFAULT_PROVIDER
+
+
+def ranking_weight_settings() -> tuple[float, float, float, float]:
+    """Return (relevance, confidence, freshness, usefulness) ranking weights."""
+    return (
+        float_env("AMCO_WEIGHT_RELEVANCE", DEFAULT_WEIGHT_RELEVANCE),
+        float_env("AMCO_WEIGHT_CONFIDENCE", DEFAULT_WEIGHT_CONFIDENCE),
+        float_env("AMCO_WEIGHT_FRESHNESS", DEFAULT_WEIGHT_FRESHNESS),
+        float_env("AMCO_WEIGHT_USEFULNESS", DEFAULT_WEIGHT_USEFULNESS),
+    )    
