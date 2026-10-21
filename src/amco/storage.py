@@ -35,6 +35,7 @@ VALID_TYPES = ("persistent", "long_term")
 
 from .ranking import rank_memories
 
+
 VALID_TYPES = ("persistent", "long_term")
 DEFAULT_CONFIDENCE = 1.0
 MAX_QUERY_TERMS = 12
