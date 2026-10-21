@@ -24,7 +24,15 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from .config import float_env, freshness_half_life_days
+from .config import (
+    DEFAULT_WEIGHT_CONFIDENCE,
+    DEFAULT_WEIGHT_FRESHNESS,
+    DEFAULT_WEIGHT_RELEVANCE,
+    DEFAULT_WEIGHT_USEFULNESS,
+    float_env,
+    freshness_half_life_days,
+    ranking_weight_settings,
+)
 
 # Prior for how reusable each memory type tends to be.
 TYPE_PRIORS = {"persistent": 1.0, "long_term": 0.6}
@@ -33,21 +41,15 @@ USAGE_CAP = 10  # uses at which the usage signal saturates
 
 @dataclass(frozen=True)
 class RankingWeights:
-    relevance: float = 0.65
-    confidence: float = 0.15
-    freshness: float = 0.05
-    usefulness: float = 0.15
+    relevance: float = DEFAULT_WEIGHT_RELEVANCE
+    confidence: float = DEFAULT_WEIGHT_CONFIDENCE
+    freshness: float = DEFAULT_WEIGHT_FRESHNESS
+    usefulness: float = DEFAULT_WEIGHT_USEFULNESS
 
 
 def weights_from_env() -> RankingWeights:
-    d = RankingWeights()
-    return RankingWeights(
-        relevance=float_env("AMCO_WEIGHT_RELEVANCE", d.relevance),
-        confidence=float_env("AMCO_WEIGHT_CONFIDENCE", d.confidence),
-        freshness=float_env("AMCO_WEIGHT_FRESHNESS", d.freshness),
-        usefulness=float_env("AMCO_WEIGHT_USEFULNESS", d.usefulness),
-    )
-
+    # Field order matches ranking_weight_settings(): relevance, confidence, freshness, usefulness.
+    return RankingWeights(*ranking_weight_settings())
 
 def parse_timestamp(value: Any) -> datetime | None:
     if not isinstance(value, str):

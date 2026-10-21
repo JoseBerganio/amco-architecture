@@ -17,6 +17,8 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
+# continue on the sprint 7
+
 from __future__ import annotations
 
 import os
