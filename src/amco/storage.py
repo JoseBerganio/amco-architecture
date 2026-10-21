@@ -35,7 +35,6 @@ VALID_TYPES = ("persistent", "long_term")
 
 from .ranking import rank_memories
 
-DEFAULT_DB = Path.home() / ".amco" / "amco.sqlite3"
 VALID_TYPES = ("persistent", "long_term")
 DEFAULT_CONFIDENCE = 1.0
 MAX_QUERY_TERMS = 12
