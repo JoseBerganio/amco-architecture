@@ -33,6 +33,7 @@ from ..ranking import rank_memories
 from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
 from .db import _has_fts, connect, rebuild_index, session
 from .hygiene import SIMILARITY_THRESHOLD, check_duplicates, restore_memory, supersede_memory
+from .search import MAX_QUERY_TERMS, search_candidates, search_memories
 
 from .memories import (
     DEFAULT_CONFIDENCE,
@@ -48,7 +49,6 @@ from .memories import (
     update_memory,
 )
 
-MAX_QUERY_TERMS = 12
 _FTS_COLUMNS = ", ".join(f"m.{name}" for name in _FIELDS)
 
 
@@ -69,45 +69,3 @@ def _keyword_candidates(terms: list[str], pool: int, db_path: Path | None) -> li
             found.append({**memory, "match_score": float(score)})
     found.sort(key=lambda m: (m["match_score"], m["id"]), reverse=True)
     return found[:pool]
-
-
-def search_candidates(
-    query: str, pool: int = 20, db_path: Path | None = None
-) -> list[dict[str, Any]]:
-    """Retrieve unranked, active candidates, each with a positive `match_score`."""
-    terms = extract_terms(query, limit=MAX_QUERY_TERMS)
-    if not terms:
-        return []
-    with session(db_path) as conn:
-        if _has_fts(conn):
-            try:
-                rows = conn.execute(
-                    f"""SELECT {_FTS_COLUMNS},
-                               -bm25(memories_fts, 1.0, 0.5) AS match_score
-                        FROM memories_fts
-                        JOIN memories m ON m.id = memories_fts.rowid
-                        WHERE memories_fts MATCH ? AND {_active_sql('m')}
-                        ORDER BY match_score DESC
-                        LIMIT ?""",
-                    (_fts_match(terms), pool),
-                ).fetchall()
-                return [dict(row) for row in rows]
-            except sqlite3.OperationalError:
-                pass  # FTS5 module missing in this build: use the fallback below
-    return _keyword_candidates(terms, pool, db_path)
-
-
-def search_memories(
-    query: str,
-    limit: int = 5,
-    db_path: Path | None = None,
-    now: datetime | None = None,
-    history: bool = False,
-) -> list[dict[str, Any]]:
-    """Full-text search over active memories, re-ranked by the Sprint 4 formula.
-
-    `history=True` stops long-term memories being demoted (used for questions about the past).
-    """
-    limit = max(1, limit)
-    candidates = search_candidates(query, pool=max(limit * 4, 20), db_path=db_path)
-    return rank_memories(candidates, now=now, history=history)[:limit]
