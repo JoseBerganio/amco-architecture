@@ -17,29 +17,24 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
+"""AMCO storage package: SQLite connection, memory records, hygiene and search.
+
+Everything public is re-exported here, so `from amco.storage import ...` keeps working.
+"""
 
 from __future__ import annotations
 
-import re
-import sqlite3
-from contextlib import contextmanager
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Iterable, Iterator
-
-from ..config import DEFAULT_DB, database_path  # noqa: F401  (re-exported, part of the public surface)
-from ..ranking import rank_memories
-
-from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
+from ..config import DEFAULT_DB, database_path
 from .db import _has_fts, connect, rebuild_index, session
-from .hygiene import SIMILARITY_THRESHOLD, check_duplicates, restore_memory, supersede_memory
-from .search import MAX_QUERY_TERMS, search_candidates, search_memories
-
+from .hygiene import (
+    SIMILARITY_THRESHOLD,
+    check_duplicates,
+    restore_memory,
+    supersede_memory,
+)
 from .memories import (
     DEFAULT_CONFIDENCE,
     VALID_TYPES,
-    _FIELDS,
-    _active_sql,
     add_memory,
     delete_memory,
     get_memory,
@@ -48,24 +43,34 @@ from .memories import (
     record_usage,
     update_memory,
 )
+from .search import MAX_QUERY_TERMS, search_candidates, search_memories
+from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
 
-_FTS_COLUMNS = ", ".join(f"m.{name}" for name in _FIELDS)
-
-
-# --- Retrieval -------------------------------------------------------------
-
-def _fts_match(terms: list[str]) -> str:
-    """Build a safe FTS5 query: every term quoted, joined with OR."""
-    return " OR ".join('"' + term.replace('"', '""') + '"' for term in terms)
-
-
-def _keyword_candidates(terms: list[str], pool: int, db_path: Path | None) -> list[dict[str, Any]]:
-    """Fallback used when the SQLite build has no FTS5."""
-    found = []
-    for memory in list_memories(db_path):
-        content = memory["content"].casefold()
-        score = sum(content.count(term) for term in terms)
-        if score:
-            found.append({**memory, "match_score": float(score)})
-    found.sort(key=lambda m: (m["match_score"], m["id"]), reverse=True)
-    return found[:pool]
+__all__ = [
+    "DEFAULT_CONFIDENCE",
+    "DEFAULT_DB",
+    "MAX_QUERY_TERMS",
+    "SIMILARITY_THRESHOLD",
+    "STOPWORDS",
+    "VALID_TYPES",
+    "_has_fts",
+    "add_memory",
+    "check_duplicates",
+    "connect",
+    "database_path",
+    "delete_memory",
+    "extract_terms",
+    "get_memory",
+    "list_memories",
+    "memory_status",
+    "normalize_content",
+    "rebuild_index",
+    "record_usage",
+    "restore_memory",
+    "search_candidates",
+    "search_memories",
+    "session",
+    "supersede_memory",
+    "term_similarity",
+    "update_memory",
+]
