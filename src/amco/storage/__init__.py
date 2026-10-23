@@ -28,12 +28,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-from .config import DEFAULT_DB, database_path  # noqa: F401  (re-exported, part of the public surface)
-from .ranking import rank_memories
+from ..config import DEFAULT_DB, database_path  # noqa: F401  (re-exported, part of the public surface)
+from ..ranking import rank_memories
 
 VALID_TYPES = ("persistent", "long_term")
 
-from .ranking import rank_memories
 
 
 VALID_TYPES = ("persistent", "long_term")
