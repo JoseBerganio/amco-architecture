@@ -32,6 +32,7 @@ from ..ranking import rank_memories
 
 from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
 from .db import _has_fts, connect, rebuild_index, session
+from .hygiene import SIMILARITY_THRESHOLD, check_duplicates, restore_memory, supersede_memory
 
 from .memories import (
     DEFAULT_CONFIDENCE,
@@ -48,73 +49,7 @@ from .memories import (
 )
 
 MAX_QUERY_TERMS = 12
-SIMILARITY_THRESHOLD = 0.6  # term overlap at which two memories count as "similar"
-
 _FTS_COLUMNS = ", ".join(f"m.{name}" for name in _FIELDS)
-
-# --- CRUD ------------------------------------------------------------------
-
-def supersede_memory(old_id: int, new_id: int, db_path: Path | None = None) -> bool:
-    """Mark `old_id` as replaced by `new_id`. Returns False if `old_id` does not exist."""
-    if old_id == new_id:
-        raise ValueError("A memory cannot supersede itself.")
-    with session(db_path) as conn:
-        new = conn.execute(
-            "SELECT superseded_by FROM memories WHERE id = ?", (new_id,)
-        ).fetchone()
-        if new is None:
-            raise ValueError(f"No memory found with ID #{new_id}.")
-        if new["superseded_by"] is not None:
-            raise ValueError(
-                f"Memory #{new_id} is itself superseded; use its replacement instead."
-            )
-        old = conn.execute(
-            "SELECT superseded_by FROM memories WHERE id = ?", (old_id,)
-        ).fetchone()
-        if old is None:
-            return False
-        if old["superseded_by"] is not None:
-            raise ValueError(f"Memory #{old_id} is already superseded by #{old['superseded_by']}.")
-        conn.execute(
-            "UPDATE memories SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (new_id, old_id),
-        )
-        return True
-
-
-def restore_memory(memory_id: int, db_path: Path | None = None) -> bool:
-    """Undo supersession. Returns False if the memory does not exist."""
-    with session(db_path) as conn:
-        cur = conn.execute(
-            "UPDATE memories SET superseded_by = NULL, superseded_at = NULL WHERE id = ?",
-            (memory_id,),
-        )
-        return cur.rowcount > 0
-
-
-# --- Duplicates ------------------------------------------------------------
-
-def check_duplicates(
-    content: str,
-    db_path: Path | None = None,
-    threshold: float = SIMILARITY_THRESHOLD,
-    max_similar: int = 3,
-) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
-    """Return (exact duplicate or None, similar active memories, best first)."""
-    key = normalize_content(content)
-    if not key:
-        return None, []
-    exact: dict[str, Any] | None = None
-    similar: list[dict[str, Any]] = []
-    for memory in list_memories(db_path):
-        if normalize_content(memory["content"]) == key:
-            exact = exact or memory
-            continue
-        similarity = term_similarity(content, memory["content"])
-        if similarity >= threshold:
-            similar.append({**memory, "similarity": similarity})
-    similar.sort(key=lambda m: m["similarity"], reverse=True)
-    return exact, similar[:max_similar]
 
 
 # --- Retrieval -------------------------------------------------------------
