@@ -2,7 +2,7 @@
 
 A local-first memory layer for local LLMs. AMCO stores information outside the model, retrieves only what is relevant to the current question, and fits it into the model's context window.
 
-**Status:** early prototype (v0.2.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Semantic search and automatic memory management are still to come.
+**Status:** early prototype (v0.5.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Version 0.5 reorganized the code into packages and added a model adapter interface, with no change to the commands or the database. Semantic search and automatic memory management are still to come.
 
 ## Why AMCO
 
@@ -17,7 +17,7 @@ Local models have a limited context window and forget everything between session
 - **Context budgeting**: retrieved memories are selected to fit a token budget, and a memory is skipped rather than cut short.
 - **Memory hygiene**: identical memories are blocked, similar ones are flagged, outdated memories can be superseded (hidden but kept and restorable), and memories can expire.
 - **Lifecycle review**: `amco memory review` suggests deleting expired or long-superseded memories, archiving idle ones, and promoting well-used ones. Nothing changes unless you pass `--apply`.
-- **Local model through Ollama**: defaults to Qwen 2.5 3B (4-bit quantized).
+- **Local model through an adapter**: talks to Ollama by default (Qwen 2.5 3B, 4-bit quantized). The engine depends on a small `ChatModel` interface rather than on Ollama itself, so other runtimes can be added without touching the memory logic.
 - **Memories are treated as data, not instructions**: the system prompt tells the model not to follow instructions found inside retrieved memories.
 - **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, supersede, and delete any of them.
 - **Tests run without Ollama**: the model is mocked in the test suite.
@@ -49,9 +49,9 @@ ollama pull qwen2.5:3b
 amco init
 ```
 
-### Upgrading from 0.1.x
+### Upgrading from 0.2.x
 
-Your database upgrades automatically the first time you run any command, but the change is one-way. Copy it first if you want a rollback:
+No action needed. Version 0.5 does not change the database, the commands, or their output.
 
 ```bash
 cp ~/.amco/amco.sqlite3 ~/.amco/amco.sqlite3.bak                      # macOS/Linux
@@ -110,6 +110,7 @@ Settings come from environment variables.
 | `AMCO_DB_PATH` | `~/.amco/amco.sqlite3` | Database location |
 | `AMCO_OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `AMCO_MODEL` | `qwen2.5:3b` | Model name |
+| `AMCO_PROVIDER` | `ollama` | Model adapter to use (only `ollama` exists so far) |
 | `AMCO_CONTEXT_TOKENS` | `4096` | Context window, also sent to Ollama as `num_ctx` |
 | `AMCO_RESERVED_OUTPUT_TOKENS` | `512` | Space kept free for the model's reply |
 | `AMCO_MEMORY_TOKENS` | `1024` | Cap on tokens spent on retrieved memories |
@@ -143,20 +144,21 @@ pytest
 
 The tests use temporary databases and a mocked model, so Ollama does not need to be running.
 
-## Project layout
+GitHub Actions runs the suite on Ubuntu and Windows with Python 3.11 and 3.13. Contract tests guard the command tree, the database schema, and the public imports.
 
 ```
 src/amco/
-├── ame.py        # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
-├── cli.py        # Typer commands and chat loop
-├── config.py     # Environment-based settings
-├── engine.py     # Public answer() entry point (wraps the AME and the model call)
-├── lifecycle.py  # Memory review: expiry, supersession, archive, promote
-├── model.py      # Ollama adapter
-├── ranking.py    # Scoring formula
-├── storage.py    # SQLite storage, FTS5 index, migration, search, supersession
-└── working.py    # Working Memory and token estimation
-tests/            # pytest suite
+├── ame.py         # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
+├── config.py      # All environment-based settings
+├── engine.py      # Public answer() entry point (AME plus the model call)
+├── lifecycle.py   # Memory review: expiry, supersession, archive, promote
+├── ranking.py     # Scoring formula
+├── working.py     # Working Memory and token estimation
+├── cli/           # Typer commands: system, memory group, chat loop
+├── models/        # Model adapter interface and the Ollama adapter
+└── storage/       # SQLite: connection and FTS5 setup, records, hygiene, search
+tests/             # pytest suite, including contract tests and snapshots
+.github/workflows/ci.yml   # CI on Ubuntu and Windows, Python 3.11 and 3.13
 ```
 
 ## Roadmap
@@ -168,9 +170,10 @@ tests/            # pytest suite
 | 3 | Working Memory, context budgeting, local model | Done |
 | 4 | Full-text search and ranking | Done (0.2) |
 | 5 | Adaptive Memory Engine, memory hygiene, lifecycle review | Done (0.2) |
-| 6+ | Model adapter interface, configuration file, evaluation, semantic retrieval | Planned (0.5) |
+| 6 to 9 | Modularization: CLI, storage and model-adapter packages, central config, CI | Done (0.5) |
+| Next | Automatic memory capture, smarter retrieval, TOML config, `stats`/`models`/`config` commands | Planned |
 
-See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the detailed log and the draft 0.5 plan.
+See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the development log and what comes next.
 
 ## Known limitations
 
@@ -183,6 +186,7 @@ See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the detailed log and the draft 0.5 pl
 - Older chat turns are dropped, not summarized.
 - Memories are never saved automatically; use `amco memory add` or `/remember`.
 - A 3B model may sometimes ignore or misuse retrieved memories. Use `/why` and the retrieved IDs shown after each answer to tell retrieval problems from model problems.
+- Only the Ollama adapter is implemented so far; the adapter interface is in place for others.
 
 ## Privacy
 

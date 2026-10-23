@@ -2,7 +2,7 @@
 
 Running log of what has been built, changed, and verified in each sprint.
 Project: **AMCO (Adaptive Memory Controller)** — a local-first memory orchestration layer for local LLMs.
-Last updated: 2026-10-18
+Last updated: 2026-10-24
 
 ## Status at a glance
 
@@ -13,8 +13,12 @@ Last updated: 2026-10-18
 | 3 | Working Memory, context budgeting, and local model setup | Done |
 | 4 | Full-text search and ranking | Done |
 | 5 | Adaptive Memory Engine (AME), memory hygiene, and lifecycle review | Done |
+| 6 | Safety net, CI, and CLI split | Done |
+| 7 | Model adapter contract and configuration centralization | Done |
+| 8 | Storage package split | Done |
+| 9 | Shim removal, test path migration, and release | Done |
 
-Current release: `0.2.0`. The 0.5 series is in planning.
+Current release: `0.5.0`.
 Default model: `qwen2.5:3b` (4-bit quantized) via Ollama
 
 ---
@@ -297,6 +301,44 @@ ____
 
 ---
 
+## Sprints 6 to 9 — Modularization update (0.5 series)
+
+**Goal:** restructure the internals so the code is easier to maintain, test and extend, with no change to what users see or what the database contains. Detailed per-sprint records are kept in the local SPRINT.md.
+
+**Approach:** code was moved verbatim first and tidied in separate commits, one module per commit with `pytest` after each. Existing tests stayed untouched until Sprint 9, settings are read at call time, and temporary shims kept old import paths working until the cleanup sprint.
+
+### Sprint 6 — Safety net, CI, and CLI split
+
+- Contract tests written against v0.2.0 before anything moved: a CLI command-tree snapshot, an import-surface test, and a database schema fingerprint.
+- GitHub Actions CI on Ubuntu and Windows with Python 3.11 and 3.13, including a non-editable install check.
+- `cli.py` became the `cli/` package (`common`, `system`, `memory`, `chat`). The chat loop receives the answer function, which keeps the `amco.cli.answer` test seam working.
+- Fixed in review: the CLI snapshot test imported `click`, which newer Typer versions no longer install. It now reads the command objects by attribute.
+
+### Sprint 7 — Model adapter and configuration
+
+- New `models/` package: a `ChatModel` interface, `ModelError` (a `RuntimeError`, so existing handlers keep working), and the `OllamaChat` adapter, with its logic and error messages moved unchanged.
+- `get_model()` factory and the `AMCO_PROVIDER` setting (default `ollama`; an unknown value gives a clear error). `answer()` accepts an optional `model`, so tests can inject a fake.
+- All environment reads moved into `config.py` (database path, timeout, provider, ranking weights), still read at call time.
+- Characterization tests pin the exact Ollama request payload and error messages.
+
+### Sprint 8 — Storage package split
+
+- `storage.py` became the `storage/` package: `text`, `db`, `memories`, `hygiene` and `search`, with `__init__` re-exporting the public API.
+- A snapshot of every storage operation (connections opened and SQL executed) showed the split added no queries.
+- An architecture test enforces the import direction `text → db → memories → hygiene → search`.
+- A small temporary seam kept the existing `_has_fts` test patch working across modules.
+
+### Sprint 9 — Cleanup and release
+
+- Removed the temporary shims: `amco.model`, `engine.ollama_chat`, `engine.context_settings`, and the `storage._has_fts` re-export.
+- Existing tests changed only in import, patch and call paths. No assertion or expected value changed.
+- Compared CLI help and read-only command output against v0.2.0 on a copy of a real database.
+- Version bumped to 0.5.0.
+
+**Tests:** the 105 v0.2.0 tests, plus contract, adapter, configuration and architecture tests (`<N>` in total). None need Ollama.
+
+---
+
 ## Current command reference
 
 | Command | Purpose |
@@ -324,6 +366,7 @@ ____
 | `AMCO_DB_PATH` | `~/.amco/amco.sqlite3` | Database location |
 | `AMCO_OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `AMCO_MODEL` | `qwen2.5:3b` | Model name |
+| `AMCO_PROVIDER` | `ollama` | Model adapter to use (only `ollama` exists so far) |
 | `AMCO_CONTEXT_TOKENS` | `4096` | Context window (also sent to Ollama as `num_ctx`) |
 | `AMCO_RESERVED_OUTPUT_TOKENS` | `512` | Space kept free for the reply |
 | `AMCO_MEMORY_TOKENS` | `1024` | Cap on tokens spent on retrieved memories |
@@ -344,34 +387,62 @@ ____
 ```
 src/amco/
 ├── __init__.py
-├── ame.py        # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
-├── cli.py        # Typer commands and chat loop
-├── config.py     # Environment-based settings
-├── engine.py     # Public answer() entry point (wraps the AME and the model call)
-├── lifecycle.py  # Memory review: expiry, supersession, archive, promote
-├── model.py      # Ollama adapter
-├── ranking.py    # Scoring formula
-├── storage.py    # SQLite storage, FTS5 index, migration, search, supersession
-└── working.py    # Working Memory and token estimation
+├── ame.py          # Adaptive Memory Engine: analysis, conflicts, budgeting, assembly
+├── config.py       # All environment-based settings
+├── engine.py       # Public answer() entry point (AME plus the model call)
+├── lifecycle.py    # Memory review: expiry, supersession, archive, promote
+├── ranking.py      # Scoring formula
+├── working.py      # Working Memory and token estimation
+├── cli/
+│   ├── __init__.py   # Builds the app and registers the commands
+│   ├── chat.py       # Chat help, command handler, and loop
+│   ├── common.py     # Consoles and shared help strings
+│   ├── memory.py     # The memory command group
+│   └── system.py     # version and init
+├── models/
+│   ├── __init__.py   # get_model() factory
+│   ├── base.py       # ChatModel interface, ModelError
+│   └── ollama.py     # OllamaChat adapter
+└── storage/
+    ├── __init__.py   # Public API (re-exports)
+    ├── db.py         # Connection, migration, FTS5 setup, index rebuild
+    ├── hygiene.py    # Supersession and duplicate checks
+    ├── memories.py   # Records, validation, CRUD, usage counts
+    ├── search.py     # Retrieval and ranking entry points
+    └── text.py       # Term extraction and normalization
+```
+
+```
 tests/
+├── snapshots/              # v0.2.0 snapshots: CLI tree, schema, storage operations
 ├── test_ame.py
+├── test_architecture.py
 ├── test_cli.py
+├── test_config.py
+├── test_contract_cli.py
+├── test_contract_imports.py
+├── test_contract_imports_models.py
+├── test_contract_model_payloads.py
+├── test_contract_schema.py
+├── test_contract_storage.py
 ├── test_engine.py
 ├── test_engine_context.py
 ├── test_engine_retrieval.py
 ├── test_hygiene.py
 ├── test_lifecycle.py
 ├── test_model.py
+├── test_models.py
 ├── test_ranking.py
 ├── test_search.py
+├── test_shims_removed.py
 ├── test_storage.py
+├── test_storage_modules.py
 └── test_working.py
 ```
-
 ## Known gaps (deferred to later sprints)
 
 - No semantic (embedding) search; FTS5 matches words and their stems, not meaning.
-- The model adapter is a single function, not yet a base interface.
+- Only the Ollama adapter exists; the `ChatModel` interface is in place for other runtimes.
 - No `models`, `stats`, or `config` commands, and no TOML configuration.
 - No retrieval metrics or evaluation set; ranking weights are untuned defaults.
 - Conflict detection is a term-overlap heuristic and cannot confirm contradictions.
@@ -382,6 +453,16 @@ tests/
 - `review` does not flag near-duplicates, and confidence is set manually.
 - Token counts are an estimate, not a real tokenizer.
 - No backup, export, or import commands.
+
+---
+
+## Release 0.1.0
+
+Sprints 1 to 3 conclude the 0.1.0 release. Sprint 4 onward belongs to the 0.2 series.
+
+- Licensed under GPL-2.0-or-later (`LICENSE` file, SPDX and GPL notice header in every source file, license declared in `pyproject.toml`).
+- Repository published on GitHub and tagged `v0.1.0`.
+- Default model: `qwen2.5:3b` (4-bit quantized) via Ollama. The model has its own license, separate from AMCO's.
 
 ---
 
@@ -397,26 +478,30 @@ Sprints 4 and 5 conclude the 0.2.0 release.
 
 ---
 
-## Up next — 0.5 series (draft plan, to be confirmed)
+## Release 0.5.0
 
-**Theme:** model independence and measurement (Phases 6 and 7). The idea is to measure retrieval quality before adding semantic search.
+Sprints 6 to 9 conclude the 0.5.0 release: a modularization update with no change to commands, options, output text, or the database schema.
 
-| Sprint | Focus |
-|--------|-------|
-| 6 | Model adapter interface (base class and Ollama implementation), `amco models`, TOML configuration, `amco config` |
-| 7 | Evaluation baseline: benchmark set, retrieval metrics, `amco stats`, ranking-weight tuning |
-| 8 | Semantic retrieval behind the adapter interface, kept only if it beats the FTS5 baseline on the benchmark |
-| 9 | Reliability: backup, export and import, logging, privacy safeguards, memory proposals from chat with user approval |
-
-This plan is a proposal, not a commitment. Sprint 6 scope will be confirmed before work starts.
-
-## Release 0.1.0
-
-Sprints 1 to 3 conclude the 0.1.0 release. Sprint 4 onward belongs to the 0.2 series.
-
-- Licensed under GPL-2.0-or-later (`LICENSE` file, SPDX and GPL notice header in every source file, license declared in `pyproject.toml`).
-- Repository published on GitHub and tagged `v0.1.0`.
-- Default model: `qwen2.5:3b` (4-bit quantized) via Ollama. The model has its own license, separate from AMCO's.
+- Tagged `v0.5.0`. The version string is `0.5.0`.
+- **Upgrading from 0.2.x:** no action needed. A 0.2.0 database works with 0.5.0, and the other way round.
+- New setting: `AMCO_PROVIDER` (default `ollama`).
+- Removed internal modules (the Python API was never documented): `amco.model` (use `amco.models.OllamaChat`), `amco.engine.ollama_chat` (use `amco.models.get_model().chat(...)`, or pass `model=` to `amco.engine.answer`), `amco.engine.context_settings` (import it from `amco.config`), and `amco.storage._has_fts` (now `amco.storage.db._has_fts`).
+- Rollback point: `v0.2.0`.
 
 ---
+
+## Up next — 0.6 series (candidates, to be confirmed)
+
+Capability work deferred from 0.5.0:
+
+- Automatic memory capture: proposals only, stored separately, approved by the user, screened for secrets, and checked against the duplicate and conflict logic.
+- Memory maintenance improvements (near-duplicates in `review`, richer conflict handling).
+- Smarter retrieval, preceded by a small benchmark so any improvement can be measured. Semantic search is kept only if it beats the FTS5 baseline.
+- Coding-session support, after deciding project scoping and how code counts against the token budget.
+- TOML configuration and the `stats`, `models`, and `config` commands.
+
+Also carried over from the earlier draft: an evaluation baseline with retrieval metrics, and backup, export and import commands.
+
+This list is a proposal, not a commitment.
+
 
