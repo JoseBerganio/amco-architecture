@@ -31,6 +31,8 @@ from typing import Any, Iterable, Iterator
 from ..config import DEFAULT_DB, database_path  # noqa: F401  (re-exported, part of the public surface)
 from ..ranking import rank_memories
 
+from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
+
 VALID_TYPES = ("persistent", "long_term")
 
 
@@ -48,14 +50,6 @@ _FIELDS = (
 _COLUMNS = ", ".join(_FIELDS)
 _FTS_COLUMNS = ", ".join(f"m.{name}" for name in _FIELDS)
 
-STOPWORDS = frozenset("""
-a an the and or but if of to in on at by for with about as from into is are was were be been am
-do does did it its this that these those i you he she we they me my your our their what which who
-whom when where why how can could should would will shall may might must not no so than then there
-here have has had any some please tell hi hello hey thanks thank ok okay
-""".split())
-
-_TOKEN_RE = re.compile(r"[^\W_]+")
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
@@ -381,20 +375,6 @@ def restore_memory(memory_id: int, db_path: Path | None = None) -> bool:
 
 # --- Duplicates ------------------------------------------------------------
 
-
-def normalize_content(text: str) -> str:
-    """Case, whitespace and trailing punctuation do not make a memory different."""
-    return " ".join(text.casefold().split()).rstrip(".!? ")
-
-
-def term_similarity(a: str, b: str) -> float:
-    """Jaccard overlap (0 to 1) of the meaningful terms of two texts."""
-    terms_a, terms_b = set(extract_terms(a)), set(extract_terms(b))
-    if not terms_a or not terms_b:
-        return 0.0
-    return len(terms_a & terms_b) / len(terms_a | terms_b)
-
-
 def check_duplicates(
     content: str,
     db_path: Path | None = None,
@@ -419,17 +399,6 @@ def check_duplicates(
 
 
 # --- Retrieval -------------------------------------------------------------
-
-
-def extract_terms(text: str, limit: int | None = None) -> list[str]:
-    """Meaningful lowercase terms: no punctuation, stopwords, one-letter tokens or duplicates."""
-    terms: list[str] = []
-    for token in _TOKEN_RE.findall(text.casefold()):
-        if len(token) < 2 or token in STOPWORDS or token in terms:
-            continue
-        terms.append(token)
-    return terms if limit is None else terms[:limit]
-
 
 def _fts_match(terms: list[str]) -> str:
     """Build a safe FTS5 query: every term quoted, joined with OR."""
