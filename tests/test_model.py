@@ -20,7 +20,7 @@
 import httpx
 import pytest
 
-import amco.model as model
+import amco.models.ollama as model
 
 
 def _fake_post(captured: dict, response: httpx.Response):
@@ -45,7 +45,7 @@ def test_default_model_is_qwen(monkeypatch):
     reply = _response(200, json={"message": {"content": "hi"}})
     monkeypatch.setattr(model.httpx, "post", _fake_post(captured, reply))
 
-    assert model.ollama_chat([{"role": "user", "content": "hello"}]) == "hi"
+    assert model.OllamaChat().chat([{"role": "user", "content": "hello"}]) == "hi"
     assert captured["json"]["model"] == "qwen2.5:3b"
     assert captured["json"]["stream"] is False
 
@@ -56,7 +56,7 @@ def test_context_window_is_sent_to_ollama(monkeypatch):
     reply = _response(200, json={"message": {"content": "ok"}})
     monkeypatch.setattr(model.httpx, "post", _fake_post(captured, reply))
 
-    model.ollama_chat([{"role": "user", "content": "hello"}])
+    model.OllamaChat().chat([{"role": "user", "content": "hello"}])
     assert captured["json"]["options"]["num_ctx"] == 2048
 
 
@@ -66,5 +66,5 @@ def test_missing_model_gives_pull_hint(monkeypatch):
     monkeypatch.setattr(model.httpx, "post", _fake_post({}, reply))
 
     with pytest.raises(RuntimeError) as exc_info:
-        model.ollama_chat([{"role": "user", "content": "hello"}])
+        model.OllamaChat().chat([{"role": "user", "content": "hello"}])
     assert "ollama pull qwen2.5:3b" in str(exc_info.value)
