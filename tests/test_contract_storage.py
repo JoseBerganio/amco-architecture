@@ -181,7 +181,7 @@ def test_patching_has_fts_forces_the_keyword_fallback_and_blocks_rebuild(
     # With FTS5, stemming makes "answers" match "answer".
     assert len(search_candidates("answers", db_path=db)) == 1
 
-    monkeypatch.setattr(storage, "_has_fts", lambda conn: False)
+    monkeypatch.setattr(storage.db, "_has_fts", lambda conn: False)
 
     # The keyword fallback counts substrings, so "answers" no longer matches.
     assert search_candidates("answers", db_path=db) == []

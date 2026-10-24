@@ -30,7 +30,7 @@ SURFACE = {
         "memory_status", "add_memory", "list_memories", "get_memory", "update_memory",
         "delete_memory", "supersede_memory", "restore_memory", "normalize_content",
         "term_similarity", "check_duplicates", "extract_terms", "search_candidates",
-        "search_memories", "record_usage", "rebuild_index", "_has_fts",
+        "search_memories", "record_usage", "rebuild_index",
     ],
     "amco.engine": [
         "answer", "select_memories", "retrieval_query",

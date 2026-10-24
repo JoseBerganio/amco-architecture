@@ -20,7 +20,6 @@
 from __future__ import annotations
 
 import sqlite3
-import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -79,18 +78,6 @@ def _has_fts(conn: sqlite3.Connection) -> bool:
     return row is not None
 
 
-def _fts_available(conn: sqlite3.Connection) -> bool:
-    """Ask `amco.storage._has_fts` whether the FTS5 index can be used.
-
-    TEMPORARY SEAM (removed in Sprint 9). The test suite patches
-    `amco.storage._has_fts` to simulate a SQLite build without FTS5. Looking the
-    function up on the package at call time keeps that patch working for code
-    that now lives in other modules (rebuild_index here, and search.py).
-    `_ensure_fts` below deliberately keeps calling the real `_has_fts` directly.
-    """
-    return sys.modules["amco.storage"]._has_fts(conn)
-
-
 def _ensure_fts(conn: sqlite3.Connection) -> bool:
     """Create the FTS5 index and its sync triggers. Returns False if FTS5 is unavailable."""
     if _has_fts(conn):
@@ -139,7 +126,7 @@ def session(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
 def rebuild_index(db_path: Path | None = None) -> bool:
     """Rebuild the FTS index from the memories table. False if FTS5 is unavailable."""
     with session(db_path) as conn:
-        if not _fts_available(conn):
+        if not _has_fts(conn):
             return False
         conn.execute("INSERT INTO memories_fts(memories_fts) VALUES ('rebuild')")
         return True

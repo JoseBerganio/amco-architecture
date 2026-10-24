@@ -29,7 +29,7 @@ from amco.storage import db as db_module
 
 SURFACE = {
     "amco.storage.text": ["STOPWORDS", "extract_terms", "normalize_content", "term_similarity"],
-    "amco.storage.db": ["connect", "session", "rebuild_index", "_has_fts", "_fts_available"],
+    "amco.storage.db": ["connect", "session", "rebuild_index", "_has_fts"],
     "amco.storage.memories": [
         "VALID_TYPES", "DEFAULT_CONFIDENCE", "memory_status", "add_memory",
         "list_memories", "get_memory", "update_memory", "delete_memory", "record_usage",
@@ -40,7 +40,7 @@ SURFACE = {
     "amco.storage.search": ["MAX_QUERY_TERMS", "search_candidates", "search_memories"],
 }
 CASES = [(module, name) for module, names in SURFACE.items() for name in names]
-RE_EXPORTED = [case for case in CASES if case[1] != "_fts_available"]
+RE_EXPORTED = [case for case in CASES if case[1] != "_has_fts"]
 
 
 def _fts5_available() -> bool:
@@ -78,13 +78,12 @@ def test_package_init_only_re_exports():
         )
 
 
-@pytest.mark.skipif(not _fts5_available(), reason="SQLite build has no FTS5")
-def test_fts_seam_follows_a_patch_on_the_package(tmp_path: Path, monkeypatch):
-    conn = db_module.connect(tmp_path / "t.sqlite3")
-    try:
-        assert db_module._fts_available(conn) is True
-        monkeypatch.setattr(storage, "_has_fts", lambda c: False)
-        assert db_module._fts_available(conn) is False
-        assert db_module._has_fts(conn) is True  # the real function is untouched
-    finally:
-        conn.close()
+    @pytest.mark.skipif(not _fts5_available(), reason="SQLite build has no FTS5")
+    def test_patching_db_has_fts_reaches_search_and_rebuild(tmp_path: Path, monkeypatch):
+        db_file = tmp_path / "t.sqlite3"
+        storage.add_memory("Users prefer a short answer", db_path=db_file)
+        assert len(storage.search_candidates("answers", db_path=db_file)) == 1
+
+        monkeypatch.setattr(db_module, "_has_fts", lambda conn: False)
+        assert storage.search_candidates("answers", db_path=db_file) == []
+        assert storage.rebuild_index(db_path=db_file) is False
