@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from . import ame
 from .ame import SYSTEM_PROMPT, format_memory  # noqa: F401  (public convenience re-exports)
-from .config import context_settings  # noqa: F401  (cli/chat.py imports it from here; moved in Commit 5)
 from .models import ChatModel, get_model
 from .working import WorkingMemory
 

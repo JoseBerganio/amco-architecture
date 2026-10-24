@@ -33,7 +33,6 @@ RANKS = {
     "ranking": 1,
     "working": 1,
     "models": 1,
-    "model": 2,  # temporary shim, removed in Sprint 9
     "storage.text": 2,
     "storage.db": 3,
     "storage.memories": 4,

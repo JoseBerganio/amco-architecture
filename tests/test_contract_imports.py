@@ -34,7 +34,7 @@ SURFACE = {
     ],
     "amco.engine": [
         "answer", "select_memories", "retrieval_query",
-        "context_settings", "SYSTEM_PROMPT", "format_memory",
+        "SYSTEM_PROMPT", "format_memory",
     ],
     "amco.cli": ["app", "answer"],
     "amco.ame": [
