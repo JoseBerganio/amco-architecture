@@ -5,6 +5,5 @@ __pycache__/
 .pytest_cache/
 .env
 *.sqlite3
-SPRINT.md
 build/
 dist/
