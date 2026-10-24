@@ -30,13 +30,12 @@ SURFACE = {
         "memory_status", "add_memory", "list_memories", "get_memory", "update_memory",
         "delete_memory", "supersede_memory", "restore_memory", "normalize_content",
         "term_similarity", "check_duplicates", "extract_terms", "search_candidates",
-        "search_memories", "record_usage", "rebuild_index", "_has_fts",
+        "search_memories", "record_usage", "rebuild_index",
     ],
     "amco.engine": [
-        "answer", "select_memories", "retrieval_query", "ollama_chat",
-        "context_settings", "SYSTEM_PROMPT", "format_memory",
+        "answer", "select_memories", "retrieval_query",
+        "SYSTEM_PROMPT", "format_memory",
     ],
-    "amco.model": ["ollama_chat", "httpx"],
     "amco.cli": ["app", "answer"],
     "amco.ame": [
         "analyze_task", "retrieve", "resolve_duplicates", "detect_conflicts",

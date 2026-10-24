@@ -22,8 +22,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..config import model_name
-from ..engine import context_settings
+from ..config import context_settings, model_name
 from ..storage import add_memory, check_duplicates
 from ..working import WorkingMemory
 from .common import console

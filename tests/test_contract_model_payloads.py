@@ -22,7 +22,7 @@
 import httpx
 import pytest
 
-import amco.model as model
+import amco.models.ollama as model
 
 URL = "http://localhost:11434/api/chat"
 MESSAGES = [
@@ -60,7 +60,7 @@ def test_default_request_is_exactly_the_v020_request(monkeypatch):
     captured: dict = {}
     _patch_post(monkeypatch, _response(200, json={"message": {"content": "hi"}}), captured)
 
-    assert model.ollama_chat(MESSAGES) == "hi"
+    assert model.OllamaChat().chat(MESSAGES) == "hi"
     assert captured == {
         "url": "http://localhost:11434/api/chat",
         "json": {
@@ -82,7 +82,7 @@ def test_settings_change_the_request(monkeypatch):
     captured: dict = {}
     _patch_post(monkeypatch, _response(200, json={"message": {"content": "ok"}}), captured)
 
-    model.ollama_chat(MESSAGES)
+    model.OllamaChat().chat(MESSAGES)
     assert captured["url"] == "http://example.test:9999/api/chat"
     assert captured["json"]["model"] == "llama3.2"
     assert captured["json"]["options"] == {"num_ctx": 2048}
@@ -93,7 +93,7 @@ def test_explicit_timeout_wins(monkeypatch):
     _clean_env(monkeypatch)
     captured: dict = {}
     _patch_post(monkeypatch, _response(200, json={"message": {"content": "ok"}}), captured)
-    model.ollama_chat(MESSAGES, timeout=5.0)
+    model.OllamaChat().chat(MESSAGES, timeout=5.0)
     assert captured["timeout"] == 5.0
 
 
@@ -101,7 +101,7 @@ def _error_text(monkeypatch, result) -> str:
     _clean_env(monkeypatch)
     _patch_post(monkeypatch, result)
     with pytest.raises(RuntimeError) as exc_info:
-        model.ollama_chat(MESSAGES)
+        model.OllamaChat().chat(MESSAGES)
     return str(exc_info.value)
 
 

@@ -25,7 +25,7 @@ Everything public is re-exported here, so `from amco.storage import ...` keeps w
 from __future__ import annotations
 
 from ..config import DEFAULT_DB, database_path
-from .db import _has_fts, connect, rebuild_index, session
+from .db import connect, rebuild_index, session
 from .hygiene import (
     SIMILARITY_THRESHOLD,
     check_duplicates,
@@ -53,7 +53,6 @@ __all__ = [
     "SIMILARITY_THRESHOLD",
     "STOPWORDS",
     "VALID_TYPES",
-    "_has_fts",
     "add_memory",
     "check_duplicates",
     "connect",

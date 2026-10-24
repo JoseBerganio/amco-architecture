@@ -24,6 +24,8 @@ import pytest
 import amco.engine as engine
 from amco.working import WorkingMemory, estimate_tokens
 
+from types import SimpleNamespace
+
 
 def _capture(monkeypatch):
     seen = {}
@@ -32,7 +34,7 @@ def _capture(monkeypatch):
         seen["messages"] = messages
         return "ok"
 
-    monkeypatch.setattr(engine, "ollama_chat", fake_chat)
+    monkeypatch.setattr(engine, "get_model", lambda: SimpleNamespace(chat=fake_chat))
     return seen
 
 
@@ -56,7 +58,7 @@ def test_failed_model_call_does_not_record_turns(tmp_path: Path, monkeypatch):
     def boom(messages):
         raise RuntimeError("Ollama is down")
 
-    monkeypatch.setattr(engine, "ollama_chat", boom)
+    monkeypatch.setattr(engine, "get_model", lambda: SimpleNamespace(chat=boom))
     wm = WorkingMemory()
     with pytest.raises(RuntimeError):
         engine.answer("hello", wm)

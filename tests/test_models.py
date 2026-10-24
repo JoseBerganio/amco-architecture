@@ -29,6 +29,8 @@ import amco.models as models_package
 from amco.models import ChatModel, ModelError, OllamaChat, get_model
 from amco.working import WorkingMemory
 
+from types import SimpleNamespace
+
 URL = "http://localhost:11434/api/chat"
 MESSAGES = [{"role": "user", "content": "hello"}]
 
@@ -168,10 +170,10 @@ def _use_temp_db(tmp_path: Path, monkeypatch) -> None:
 def test_answer_uses_an_injected_model(tmp_path: Path, monkeypatch):
     _use_temp_db(tmp_path, monkeypatch)
 
-    def must_not_run(messages):
-        raise AssertionError("engine.ollama_chat must not be called when a model is injected")
+    def must_not_run():
+        raise AssertionError("get_model must not be called when a model is injected")
 
-    monkeypatch.setattr(engine, "ollama_chat", must_not_run)
+    monkeypatch.setattr(engine, "get_model", must_not_run)
     fake = FakeModel("hello from the fake")
     working = WorkingMemory()
 
@@ -193,7 +195,7 @@ def test_failed_injected_model_records_nothing(tmp_path: Path, monkeypatch):
     assert working.turns == []
 
 
-def test_answer_without_a_model_still_calls_the_ollama_chat_seam(tmp_path: Path, monkeypatch):
+def test_answer_without_a_model_uses_the_configured_adapter(tmp_path: Path, monkeypatch):
     _use_temp_db(tmp_path, monkeypatch)
     seen = {}
 
@@ -201,17 +203,10 @@ def test_answer_without_a_model_still_calls_the_ollama_chat_seam(tmp_path: Path,
         seen["messages"] = messages
         return "via the seam"
 
-    monkeypatch.setattr(engine, "ollama_chat", fake_chat)
+    monkeypatch.setattr(engine, "get_model", lambda: SimpleNamespace(chat=fake_chat))
     response, _ = engine.answer("hello there")
     assert response == "via the seam"
     assert seen["messages"][-1]["content"] == "hello there"
-
-
-def test_engine_ollama_chat_delegates_to_the_configured_adapter(monkeypatch):
-    fake = FakeModel("delegated")
-    monkeypatch.setattr(engine, "get_model", lambda: fake)
-    assert engine.ollama_chat(MESSAGES) == "delegated"
-    assert fake.calls == [MESSAGES]
 
 
 def test_unknown_provider_surfaces_as_a_runtime_error_from_answer(tmp_path: Path, monkeypatch):

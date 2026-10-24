@@ -133,7 +133,7 @@ def test_keyword_fallback_when_fts_is_unavailable(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("Project uses Python and SQLite", db_path=db)
     add_memory("The garden needs watering", db_path=db)
-    monkeypatch.setattr(storage, "_has_fts", lambda conn: False)
+    monkeypatch.setattr(storage.db, "_has_fts", lambda conn: False)
     results = search_memories("SQLite", db_path=db)
     assert [m["content"] for m in results] == ["Project uses Python and SQLite"]
     assert rebuild_index(db_path=db) is False

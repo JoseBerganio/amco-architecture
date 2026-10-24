@@ -23,6 +23,7 @@ import amco.ame as ame
 import amco.engine as engine
 from amco.storage import add_memory
 from amco.working import WorkingMemory
+from types import SimpleNamespace
 
 
 def test_greetings_skip_retrieval():
@@ -119,7 +120,7 @@ def test_report_is_stored_and_readable(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     monkeypatch.setenv("AMCO_DB_PATH", str(db))
     add_memory("The project codename is AMCO", db_path=db)
-    monkeypatch.setattr(engine, "ollama_chat", lambda messages: "ok")
+    monkeypatch.setattr(engine, "get_model", lambda: SimpleNamespace(chat=lambda messages: "ok"))
     wm = WorkingMemory()
     engine.answer("What is the project codename?", wm)
     assert wm.last_report is not None

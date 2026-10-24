@@ -25,7 +25,8 @@ from pathlib import Path
 from typing import Any
 
 from ..ranking import rank_memories
-from .db import _fts_available, session
+from . import db
+from .db import session
 from .memories import _FIELDS, _active_sql, list_memories
 from .text import extract_terms
 
@@ -59,7 +60,7 @@ def search_candidates(
     if not terms:
         return []
     with session(db_path) as conn:
-        if _fts_available(conn):
+        if db._has_fts(conn):
             try:
                 rows = conn.execute(
                     f"""SELECT {_FTS_COLUMNS},

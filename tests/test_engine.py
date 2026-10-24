@@ -21,6 +21,7 @@ from pathlib import Path
 
 from amco.storage import add_memory
 import amco.engine as engine
+from types import SimpleNamespace
 
 
 def test_answer_passes_retrieved_memories_to_model(tmp_path: Path, monkeypatch):
@@ -33,7 +34,7 @@ def test_answer_passes_retrieved_memories_to_model(tmp_path: Path, monkeypatch):
         seen["messages"] = messages
         return "The project codename is AMCO."
 
-    monkeypatch.setattr(engine, "ollama_chat", fake_chat)
+    monkeypatch.setattr(engine, "get_model", lambda: SimpleNamespace(chat=fake_chat))
     response, used = engine.answer("What is the project codename?")
     assert response == "The project codename is AMCO."
     assert len(used) == 1
