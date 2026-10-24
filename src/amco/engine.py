@@ -1,21 +1,31 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# AMCO — Adaptive Memory Controller
+# Copyright (C) 2026  Jose Berganio
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see
+# <https://www.gnu.org/licenses/>.
+
 """Public chat entry point. The pipeline itself lives in ame.py."""
 
 from __future__ import annotations
 
 from . import ame
-from .ame import SYSTEM_PROMPT, format_memory  # noqa: F401  (kept importable from here)
-from .config import context_settings  # noqa: F401  (cli/chat.py imports it from here)
+from .ame import SYSTEM_PROMPT, format_memory  # noqa: F401  (public convenience re-exports)
+from .config import context_settings  # noqa: F401  (cli/chat.py imports it from here; moved in Commit 5)
 from .models import ChatModel, get_model
 from .working import WorkingMemory
-
-
-def ollama_chat(messages: list[dict[str, str]]) -> str:
-    """Send messages to the configured model adapter.
-
-    Kept as a module-level function because existing callers and tests replace
-    `engine.ollama_chat`. Removed in Sprint 9.
-    """
-    return get_model().chat(messages)
 
 
 def select_memories(candidates: list[dict], budget_tokens: int) -> list[dict]:
@@ -36,14 +46,12 @@ def answer(
     """Answer a query using stored memories and (optionally) Working Memory.
 
     Without a WorkingMemory object the call is stateless, as in Sprint 1.
-    Without a `model`, the configured adapter is used (via ollama_chat).
+    Without a `model`, the adapter selected by AMCO_PROVIDER is used.
     """
     working = working if working is not None else WorkingMemory()
     prepared = ame.prepare(query, working)
-    if model is None:
-        response = ollama_chat(prepared.messages)
-    else:
-        response = model.chat(prepared.messages)
+    chat_model = model if model is not None else get_model()
+    response = chat_model.chat(prepared.messages)
     # Only record usage and the turn after the model call succeeds.
     ame.finish(prepared, query, response, working)
     return response, prepared.memories

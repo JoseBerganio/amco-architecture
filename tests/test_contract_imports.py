@@ -33,10 +33,9 @@ SURFACE = {
         "search_memories", "record_usage", "rebuild_index", "_has_fts",
     ],
     "amco.engine": [
-        "answer", "select_memories", "retrieval_query", "ollama_chat",
+        "answer", "select_memories", "retrieval_query",
         "context_settings", "SYSTEM_PROMPT", "format_memory",
     ],
-    "amco.model": ["ollama_chat", "httpx"],
     "amco.cli": ["app", "answer"],
     "amco.ame": [
         "analyze_task", "retrieve", "resolve_duplicates", "detect_conflicts",
