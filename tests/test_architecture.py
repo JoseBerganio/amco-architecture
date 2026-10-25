@@ -34,6 +34,7 @@ RANKS = {
     "working": 1,
     "models": 1,
     "storage.text": 2,
+    "storage.schema": 2,
     "storage.db": 3,
     "storage.memories": 4,
     "storage.hygiene": 5,
