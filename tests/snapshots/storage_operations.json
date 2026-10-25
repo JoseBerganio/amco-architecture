@@ -3,6 +3,9 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
+      "PRAGMA user_version",
+      "BEGIN IMMEDIATE",
+      "PRAGMA user_version",
       "PRAGMA table_info(memories)",
       "ALTER TABLE memories ADD COLUMN updated_at TEXT",
       "ALTER TABLE memories ADD COLUMN memory_type TEXT NOT NULL DEFAULT 'persistent'",
@@ -13,6 +16,7 @@
       "ALTER TABLE memories ADD COLUMN expires_at TEXT",
       "ALTER TABLE memories ADD COLUMN last_used_at TEXT",
       "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version = 1",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5( content, category, content='memories', content_rowid='id', tokenize='porter unicode61' )",
       "CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN INSERT INTO memories_fts(rowid, content, category) VALUES (new.id, new.content, new.category); END; CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN INSERT INTO memories_fts(memories_fts, rowid, content, category) VALUES ('delete', old.id, old.content, old.category); END; CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE OF content, category ON memories BEGIN INSERT INTO memories_fts(memories_fts, rowid, content, category) VALUES ('delete', old.id, old.content, old.category); INSERT INTO memories_fts(rowid, content, category) VALUES (new.id, new.content, new.category); END;",
@@ -23,8 +27,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at) VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)"
     ]
@@ -33,8 +36,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT superseded_by FROM memories WHERE id = ?",
       "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at) VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)",
@@ -45,8 +47,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
     ]
@@ -55,8 +56,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE memory_type = ? ORDER BY id DESC"
     ]
@@ -65,8 +65,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE id = ?"
     ]
@@ -75,8 +74,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "UPDATE memories SET content = ?, confidence = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
     ]
@@ -85,8 +83,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT superseded_by FROM memories WHERE id = ?",
       "UPDATE memories SET superseded_by = ?, superseded_at = CASE WHEN ? IS NULL THEN NULL ELSE superseded_at END WHERE superseded_by = ?",
@@ -97,8 +94,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT superseded_by FROM memories WHERE id = ?"
     ]
@@ -107,8 +103,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT superseded_by FROM memories WHERE id = ?",
       "SELECT superseded_by FROM memories WHERE id = ?",
@@ -119,8 +114,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "UPDATE memories SET superseded_by = NULL, superseded_at = NULL WHERE id = ?"
     ]
@@ -129,8 +123,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
     ]
@@ -139,8 +132,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
@@ -150,8 +142,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
@@ -161,8 +152,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "UPDATE memories SET use_count = use_count + 1, last_used_at = CURRENT_TIMESTAMP WHERE id = ?"
     ]
@@ -171,8 +161,7 @@
     "connects": 1,
     "statements": [
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
-      "PRAGMA table_info(memories)",
-      "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
+      "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "INSERT INTO memories_fts(memories_fts) VALUES ('rebuild')"

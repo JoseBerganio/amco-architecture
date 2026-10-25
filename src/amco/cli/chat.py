@@ -23,7 +23,7 @@ from __future__ import annotations
 from typing import Callable
 
 from ..config import context_settings, model_name
-from ..storage import add_memory, check_duplicates
+from ..storage import SchemaError, add_memory, check_duplicates
 from ..working import WorkingMemory
 from .common import console
 
@@ -109,6 +109,11 @@ def _describe_retrieved(memories: list[dict]) -> str:
     return ", ".join(parts)
 
 
+def _report_database_error(exc: SchemaError) -> None:
+    console.print("[red]Database error:[/red]", end=" ")
+    console.print(str(exc), markup=False, highlight=False)
+
+
 def run_chat(answer_fn: Callable[[str, WorkingMemory], tuple[str, list[dict]]]) -> None:
     """The interactive loop. `answer_fn` is passed in so tests can replace it."""
     working = WorkingMemory()
@@ -126,10 +131,16 @@ def run_chat(answer_fn: Callable[[str, WorkingMemory], tuple[str, list[dict]]]) 
         if not query:
             continue
         if query.startswith("/"):
-            _handle_chat_command(query, working)
+            try:
+                _handle_chat_command(query, working)
+            except SchemaError as exc:
+                _report_database_error(exc)
             continue
         try:
             response, used_memories = answer_fn(query, working)
+        except SchemaError as exc:
+            _report_database_error(exc)
+            continue
         except RuntimeError as exc:
             console.print(f"[red]Model error:[/red] {exc}")
             continue

@@ -23,7 +23,10 @@ For each operation, the snapshot holds the number of sqlite3.connect() calls and
 the whitespace-normalized SQL text passed to the connection. Parameters are not
 recorded.
 
-Regenerate the snapshot ONLY from pre-split code:  python tests/test_contract_storage.py
+Regenerate the snapshot only inside the sprint that deliberately changes storage SQL,
+and read the diff first:  python tests/test_contract_storage.py
+Last regenerated in Sprint 10a (schema versioning: connect() reads user_version
+instead of running PRAGMA table_info and an UPDATE on every call).
 """
 
 import json

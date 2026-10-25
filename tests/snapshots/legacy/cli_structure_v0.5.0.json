@@ -1,0 +1,518 @@
+{
+  "name": "amco",
+  "help": "AMCO — Adaptive Memory Controller",
+  "params": [
+    {
+      "kind": "option",
+      "name": "install_completion",
+      "opts": [
+        "--install-completion"
+      ],
+      "secondary_opts": [],
+      "required": false,
+      "default": null,
+      "type": "boolean",
+      "min": null,
+      "max": null,
+      "is_flag": true,
+      "help": "Install completion for the current shell."
+    },
+    {
+      "kind": "option",
+      "name": "show_completion",
+      "opts": [
+        "--show-completion"
+      ],
+      "secondary_opts": [],
+      "required": false,
+      "default": null,
+      "type": "boolean",
+      "min": null,
+      "max": null,
+      "is_flag": true,
+      "help": "Show completion for the current shell, to copy it or customize the installation."
+    }
+  ],
+  "no_args_is_help": true,
+  "commands": [
+    {
+      "name": "version",
+      "help": "Show AMCO version.",
+      "params": []
+    },
+    {
+      "name": "init",
+      "help": "Initialize the local workspace and SQLite database.",
+      "params": []
+    },
+    {
+      "name": "chat",
+      "help": "Start a memory-enabled interactive chat with Ollama.",
+      "params": []
+    },
+    {
+      "name": "memory",
+      "help": "Manage stored memories.",
+      "params": [],
+      "no_args_is_help": true,
+      "commands": [
+        {
+          "name": "add",
+          "help": "Add an explicitly approved memory.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "content",
+              "opts": [
+                "content"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Text to save as a memory."
+            },
+            {
+              "kind": "option",
+              "name": "category",
+              "opts": [
+                "--category",
+                "-c"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": "general",
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory category."
+            },
+            {
+              "kind": "option",
+              "name": "memory_type",
+              "opts": [
+                "--type",
+                "-t"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": "persistent",
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory type: persistent or long_term."
+            },
+            {
+              "kind": "option",
+              "name": "confidence",
+              "opts": [
+                "--confidence"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": 1.0,
+              "type": "float range",
+              "min": 0.0,
+              "max": 1.0,
+              "is_flag": false,
+              "help": "Confidence from 0 to 1 (1 = confirmed)."
+            },
+            {
+              "kind": "option",
+              "name": "expires",
+              "opts": [
+                "--expires"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Last day this memory is valid (YYYY-MM-DD)."
+            },
+            {
+              "kind": "option",
+              "name": "supersedes",
+              "opts": [
+                "--supersedes"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "ID of an older memory this one replaces."
+            },
+            {
+              "kind": "option",
+              "name": "force",
+              "opts": [
+                "--force"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Save even if an identical memory exists."
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "help": "List stored memories.",
+          "params": [
+            {
+              "kind": "option",
+              "name": "memory_type",
+              "opts": [
+                "--type",
+                "-t"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory type: persistent or long_term."
+            },
+            {
+              "kind": "option",
+              "name": "show_all",
+              "opts": [
+                "--all"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Include superseded and expired memories."
+            }
+          ]
+        },
+        {
+          "name": "inspect",
+          "help": "Show a memory's full content and metadata.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "memory_id",
+              "opts": [
+                "memory_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory ID."
+            }
+          ]
+        },
+        {
+          "name": "update",
+          "help": "Update a memory's content, category, type, confidence, or expiry.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "memory_id",
+              "opts": [
+                "memory_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory ID."
+            },
+            {
+              "kind": "option",
+              "name": "content",
+              "opts": [
+                "--content"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "New content."
+            },
+            {
+              "kind": "option",
+              "name": "category",
+              "opts": [
+                "--category",
+                "-c"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "New category."
+            },
+            {
+              "kind": "option",
+              "name": "memory_type",
+              "opts": [
+                "--type",
+                "-t"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory type: persistent or long_term."
+            },
+            {
+              "kind": "option",
+              "name": "confidence",
+              "opts": [
+                "--confidence"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "float range",
+              "min": 0.0,
+              "max": 1.0,
+              "is_flag": false,
+              "help": "Confidence from 0 to 1 (1 = confirmed)."
+            },
+            {
+              "kind": "option",
+              "name": "expires",
+              "opts": [
+                "--expires"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "New expiry date (YYYY-MM-DD), or 'none' to clear it."
+            }
+          ]
+        },
+        {
+          "name": "supersede",
+          "help": "Mark a memory as replaced by another. It is hidden from chat but kept.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "old_id",
+              "opts": [
+                "old_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory being replaced."
+            },
+            {
+              "kind": "argument",
+              "name": "new_id",
+              "opts": [
+                "new_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory that replaces it."
+            }
+          ]
+        },
+        {
+          "name": "restore",
+          "help": "Bring a superseded memory back into use.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "memory_id",
+              "opts": [
+                "memory_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory ID."
+            }
+          ]
+        },
+        {
+          "name": "review",
+          "help": "Review memory health: expired, superseded, duplicate, stale, and well-used memories.",
+          "params": [
+            {
+              "kind": "option",
+              "name": "apply",
+              "opts": [
+                "--apply"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Carry out the suggested changes."
+            },
+            {
+              "kind": "option",
+              "name": "yes",
+              "opts": [
+                "--yes",
+                "-y"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Skip confirmation with --apply."
+            }
+          ]
+        },
+        {
+          "name": "search",
+          "help": "Full-text search over active memories, ranked by relevance, confidence, freshness and usefulness.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "query",
+              "opts": [
+                "query"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Words to search for."
+            },
+            {
+              "kind": "option",
+              "name": "limit",
+              "opts": [
+                "--limit"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": 5,
+              "type": "int range",
+              "min": 1,
+              "max": 50,
+              "is_flag": false,
+              "help": "Maximum results."
+            },
+            {
+              "kind": "option",
+              "name": "explain",
+              "opts": [
+                "--explain"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Show how each result was scored."
+            }
+          ]
+        },
+        {
+          "name": "reindex",
+          "help": "Rebuild the full-text search index from the stored memories.",
+          "params": []
+        },
+        {
+          "name": "delete",
+          "help": "Delete a memory by ID.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "memory_id",
+              "opts": [
+                "memory_id"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": null
+            },
+            {
+              "kind": "option",
+              "name": "yes",
+              "opts": [
+                "--yes",
+                "-y"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Skip confirmation."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

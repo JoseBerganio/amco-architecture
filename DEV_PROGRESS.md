@@ -339,6 +339,18 @@ ____
 
 ---
 
+## Sprint 10a — Schema versioning and safe migrations (0.6 series, in progress)
+
+**Goal:** make schema changes safe before any 0.6 feature changes the database.
+
+- New `storage/schema.py`: the schema version lives in `PRAGMA user_version`. Migration 1 is the old in-place upgrade, unchanged, so any 0.1 to 0.5 database reaches the same schema. The fingerprint test confirms it.
+- Each migration runs under `BEGIN IMMEDIATE` with the version re-read inside the lock, and the version bump commits with the change or not at all. A failing migration rolls back.
+- A database from a newer AMCO is refused with a clear message (`SchemaError`) and is not touched.
+- New `storage/backup.py`: before a real upgrade, the database is copied to `<name>.bak-v<old version>` using SQLite's backup API. Backups are never overwritten, and if the backup fails the upgrade is not attempted.
+- `connect()` no longer runs `PRAGMA table_info` and an `UPDATE` on every call; it reads `user_version` instead. `storage_operations.json` was regenerated for this and the diff reviewed.
+- CLI commands and the chat loop report schema problems as one clear line (exit code 1) instead of a traceback.
+- No new commands, no schema change, no change to retrieval.
+
 ## Current command reference
 
 | Command | Purpose |

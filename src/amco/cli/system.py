@@ -21,14 +21,14 @@ from __future__ import annotations
 
 from .. import __version__
 from ..storage import database_path, session
-from .common import console
+from .common import console, handle_schema_errors
 
 
 def version() -> None:
     """Show AMCO version."""
     console.print(f"AMCO {__version__}")
 
-
+@handle_schema_errors
 def init() -> None:
     """Initialize the local workspace and SQLite database."""
     path = database_path()

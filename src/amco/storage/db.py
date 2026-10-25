@@ -25,50 +25,51 @@ from pathlib import Path
 from typing import Iterator
 
 from ..config import database_path
+from .backup import backup_database
+from .schema import Migration, SchemaError, migrate
+
+# The newline before the closing parenthesis is part of the schema fingerprint:
+# ALTER TABLE inserts new columns after it. Do not reformat this statement.
+_BASE_TABLE = """
+    CREATE TABLE IF NOT EXISTS memories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        source TEXT NOT NULL DEFAULT 'user',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+"""
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path = db_path or database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Decided BEFORE sqlite3.connect() can create the file. A non-empty file may
+    # hold real data, so it is backed up before any migration touches it.
+    existed = path.exists() and path.stat().st_size > 0
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            content TEXT NOT NULL,
-            category TEXT NOT NULL DEFAULT 'general',
-            source TEXT NOT NULL DEFAULT 'user',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    _migrate(conn)
-    _ensure_fts(conn)
-    conn.commit()
+
+    def back_up_first(old_version: int, to_run: list[Migration]) -> None:
+        if not existed:
+            return
+        try:
+            backup_database(conn, path, old_version)
+        except (sqlite3.Error, OSError) as exc:
+            raise SchemaError(
+                "Could not back up the database before upgrading it, so the upgrade "
+                f"was not attempted and your data is untouched: {exc}"
+            ) from exc
+
+    try:
+        conn.execute(_BASE_TABLE)
+        migrate(conn, before=back_up_first)
+        _ensure_fts(conn)
+        conn.commit()
+    except BaseException:
+        conn.close()  # a refused or failed upgrade must not leak the connection
+        raise
     return conn
-
-
-def _migrate(conn: sqlite3.Connection) -> None:
-    """Upgrade databases created by earlier sprints in place."""
-    existing = {row["name"] for row in conn.execute("PRAGMA table_info(memories)")}
-    if "updated_at" not in existing:
-        conn.execute("ALTER TABLE memories ADD COLUMN updated_at TEXT")
-    if "memory_type" not in existing:
-        conn.execute(
-            "ALTER TABLE memories ADD COLUMN memory_type TEXT NOT NULL DEFAULT 'persistent'"
-        )
-    if "confidence" not in existing:  # Sprint 4
-        conn.execute("ALTER TABLE memories ADD COLUMN confidence REAL NOT NULL DEFAULT 1.0")
-    if "use_count" not in existing:  # Sprint 4
-        conn.execute("ALTER TABLE memories ADD COLUMN use_count INTEGER NOT NULL DEFAULT 0")
-    for name, ddl in (  # Sprint 5
-        ("superseded_by", "INTEGER"),
-        ("superseded_at", "TEXT"),
-        ("expires_at", "TEXT"),
-        ("last_used_at", "TEXT"),
-    ):
-        if name not in existing:
-            conn.execute(f"ALTER TABLE memories ADD COLUMN {name} {ddl}")
-    conn.execute("UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL")
 
 
 def _has_fts(conn: sqlite3.Connection) -> bool:

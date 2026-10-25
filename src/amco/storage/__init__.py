@@ -44,14 +44,17 @@ from .memories import (
     update_memory,
 )
 from .search import MAX_QUERY_TERMS, search_candidates, search_memories
+from .schema import SCHEMA_VERSION, SchemaError
 from .text import STOPWORDS, extract_terms, normalize_content, term_similarity
 
 __all__ = [
     "DEFAULT_CONFIDENCE",
     "DEFAULT_DB",
     "MAX_QUERY_TERMS",
+    "SCHEMA_VERSION",
     "SIMILARITY_THRESHOLD",
     "STOPWORDS",
+    "SchemaError",
     "VALID_TYPES",
     "add_memory",
     "check_duplicates",

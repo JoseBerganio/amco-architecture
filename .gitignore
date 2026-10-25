@@ -7,3 +7,4 @@ __pycache__/
 *.sqlite3
 build/
 dist/
+*.sqlite3.bak-*
