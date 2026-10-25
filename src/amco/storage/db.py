@@ -25,7 +25,8 @@ from pathlib import Path
 from typing import Iterator
 
 from ..config import database_path
-from .schema import migrate
+from .backup import backup_database
+from .schema import Migration, SchemaError, migrate
 
 # The newline before the closing parenthesis is part of the schema fingerprint:
 # ALTER TABLE inserts new columns after it. Do not reformat this statement.
@@ -43,11 +44,26 @@ _BASE_TABLE = """
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path = db_path or database_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Decided BEFORE sqlite3.connect() can create the file. A non-empty file may
+    # hold real data, so it is backed up before any migration touches it.
+    existed = path.exists() and path.stat().st_size > 0
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+
+    def back_up_first(old_version: int, to_run: list[Migration]) -> None:
+        if not existed:
+            return
+        try:
+            backup_database(conn, path, old_version)
+        except (sqlite3.Error, OSError) as exc:
+            raise SchemaError(
+                "Could not back up the database before upgrading it, so the upgrade "
+                f"was not attempted and your data is untouched: {exc}"
+            ) from exc
+
     try:
         conn.execute(_BASE_TABLE)
-        migrate(conn)
+        migrate(conn, before=back_up_first)
         _ensure_fts(conn)
         conn.commit()
     except BaseException:

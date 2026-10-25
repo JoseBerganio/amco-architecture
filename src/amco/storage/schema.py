@@ -154,12 +154,22 @@ def _apply(conn: sqlite3.Connection, migration: Migration) -> bool:
         raise
 
 
-def migrate(conn: sqlite3.Connection) -> list[int]:
+def migrate(
+    conn: sqlite3.Connection,
+    before: Callable[[int, list[Migration]], None] | None = None,
+) -> list[int]:
     """Bring the database up to the latest version. Returns the versions applied.
+
+    `before(old_version, pending)` is called once, only when something is
+    pending, and before the first migration runs. If it raises, nothing is
+    migrated. connect() uses it to back the database up first.
 
     An up-to-date database costs one PRAGMA read and takes no write lock.
     """
     to_run = pending(conn)
+    if to_run and before is not None:
+        # Pending migrations are consecutive, so the old version is one below the first.
+        before(to_run[0].version - 1, to_run)
     applied: list[int] = []
     for migration in to_run:
         if _apply(conn, migration):
