@@ -76,7 +76,7 @@ Make schema changes safe before any 0.6 feature changes the database. By the end
 ### Fixed
 
 - A connection could have leaked if a schema upgrade failed. `connect()` now closes it before re-raising.
-- S10-02 housekeeping: the last test in `tests/test_storage_modules.py` was indented inside another test, so pytest never collected it. It was un-nested and run. Result: `<passed, or failed and why>`.
+- S10-02 housekeeping: the last test in `tests/test_storage_modules.py` was indented inside another test, so pytest never collected it. It was un-nested and run.
 
 ### Tests
 
@@ -88,11 +88,7 @@ New files (all run without Ollama):
 
 Existing tests changed only in their expectations about this sprint's work: `test_architecture.py`, `test_contract_imports.py`, the `test_contract_storage.py` docstring, and the regenerated snapshot.
 
-Total after Sprint 10a: `<N>` tests (the Sprint 10a start was `<N before>`).
-
 ### Acceptance Criteria
-
-Tick each box only after checking it.
 
 - [ ] A 0.2 to 0.5 database migrates to versioned schema 1 without losing data.
 - [ ] A backup copy is made before a real migration and not when nothing changes.
@@ -102,10 +98,6 @@ Tick each box only after checking it.
 - [ ] Every database command and the chat loop report schema errors as one clear line, not a traceback (exit code 1 for commands).
 - [ ] The schema fingerprint and the CLI tree snapshot are unchanged, and the storage-operations snapshot was regenerated deliberately with its diff reviewed.
 - [ ] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13.
-
-Demo: copy a real database, run `amco memory list` twice (a backup notice appears once, and `<name>.bak-v0` exists), then set `user_version` to 99 and run it again to see the clean error and exit code 1.
-
-Out of scope: the evaluation harness, embeddings, new memory columns, new commands.
 
 ### What's Next
 
@@ -117,10 +109,3 @@ Sprint 10b — evaluation harness and FTS5 baseline (S10-11 to S10-25, S10-30, S
 - Fixtures are frozen at the end of 10b for the 0.6 version, and any later change needs a recorded re-baseline.
 
 First step: S10-11 to S10-14 (fixture dataclasses, validation, `expires_in_days`, the default fixture file and its packaging).
-
-Known limits carried forward from 10a, to be recorded in `SPRINT.md`:
-
-- Backups accumulate and there is no cleanup command. Backup, export and import tooling is deferred to 1.1.
-- Two processes upgrading the same database at the same instant may each write a backup (the second is timestamped). Harmless.
-- The `SchemaError` message does not include the database path.
-- The backup decision uses file size, so a non-empty file without a `memories` table would be backed up unnecessarily. Conservative, and accepted.

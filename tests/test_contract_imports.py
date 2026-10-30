@@ -30,7 +30,7 @@ SURFACE = {
         "memory_status", "add_memory", "list_memories", "get_memory", "update_memory",
         "delete_memory", "supersede_memory", "restore_memory", "normalize_content",
         "term_similarity", "check_duplicates", "extract_terms", "search_candidates",
-        "search_memories", "record_usage", "rebuild_index",
+        "search_memories", "record_usage", "rebuild_index", "SCHEMA_VERSION", "SchemaError",
     ],
     "amco.engine": [
         "answer", "select_memories", "retrieval_query",
@@ -53,6 +53,11 @@ SURFACE = {
         "freshness_half_life_days", "followup_settings", "lifecycle_settings",
         "DEFAULT_TIMEOUT_SECONDS",
     ],
+    "amco.storage.schema": [
+        "SCHEMA_VERSION", "SchemaError", "Migration", "MIGRATIONS",
+        "latest_version", "current_version", "pending", "migrate",
+    ],
+    "amco.storage.backup": ["backup_path", "backup_database"],
 }
 
 CASES = [(module, name) for module, names in SURFACE.items() for name in names]

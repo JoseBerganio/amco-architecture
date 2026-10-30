@@ -38,12 +38,20 @@ from ..storage import (
     supersede_memory,
     update_memory,
 )
-from .common import CONFIDENCE_HELP, TYPE_HELP, _status_label, console, err_console
+from .common import (
+    CONFIDENCE_HELP,
+    TYPE_HELP,
+    _status_label,
+    console,
+    err_console,
+    handle_schema_errors,
+  )
 
 memory_app = typer.Typer(help="Manage stored memories.", no_args_is_help=True)
 
 
 @memory_app.command("add")
+@handle_schema_errors
 def memory_add(
     content: str = typer.Argument(..., help="Text to save as a memory."),
     category: str = typer.Option("general", "--category", "-c", help="Memory category."),
@@ -93,6 +101,7 @@ def memory_add(
 
 
 @memory_app.command("list")
+@handle_schema_errors
 def memory_list(
     memory_type: Optional[str] = typer.Option(None, "--type", "-t", help=TYPE_HELP),
     show_all: bool = typer.Option(
@@ -127,6 +136,7 @@ def memory_list(
 
 
 @memory_app.command("inspect")
+@handle_schema_errors
 def memory_inspect(
     memory_id: int = typer.Argument(..., min=1, help="Memory ID."),
 ) -> None:
@@ -151,6 +161,7 @@ def memory_inspect(
 
 
 @memory_app.command("update")
+@handle_schema_errors
 def memory_update(
     memory_id: int = typer.Argument(..., min=1, help="Memory ID."),
     content: Optional[str] = typer.Option(None, "--content", help="New content."),
@@ -177,6 +188,7 @@ def memory_update(
 
 
 @memory_app.command("supersede")
+@handle_schema_errors
 def memory_supersede(
     old_id: int = typer.Argument(..., min=1, help="Memory being replaced."),
     new_id: int = typer.Argument(..., min=1, help="Memory that replaces it."),
@@ -193,6 +205,7 @@ def memory_supersede(
 
 
 @memory_app.command("restore")
+@handle_schema_errors
 def memory_restore(
     memory_id: int = typer.Argument(..., min=1, help="Memory ID."),
 ) -> None:
@@ -204,6 +217,7 @@ def memory_restore(
 
 
 @memory_app.command("review")
+@handle_schema_errors
 def memory_review(
     apply: bool = typer.Option(False, "--apply", help="Carry out the suggested changes."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation with --apply."),
@@ -235,6 +249,7 @@ def memory_review(
 
 
 @memory_app.command("search")
+@handle_schema_errors
 def memory_search(
     query: str = typer.Argument(..., help="Words to search for."),
     limit: int = typer.Option(5, min=1, max=50, help="Maximum results."),
@@ -262,6 +277,7 @@ def memory_search(
 
 
 @memory_app.command("reindex")
+@handle_schema_errors
 def memory_reindex() -> None:
     """Rebuild the full-text search index from the stored memories."""
     if rebuild_index():
@@ -272,6 +288,7 @@ def memory_reindex() -> None:
 
 
 @memory_app.command("delete")
+@handle_schema_errors
 def memory_delete(
     memory_id: int = typer.Argument(..., min=1),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation."),
