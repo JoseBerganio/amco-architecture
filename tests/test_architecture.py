@@ -43,6 +43,7 @@ RANKS = {
     "storage": 7,  # the package __init__ (public surface)
     "ame": 8,
     "lifecycle": 8,
+    "evaluation": 9,
     "engine": 9,
     "cli": 10,
 }
