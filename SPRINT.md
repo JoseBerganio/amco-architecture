@@ -1,7 +1,7 @@
 # AMCO Sprint Plan: v0.6 to v1.0
 
-Status: planning
-Last updated: 2026-10-24
+Status: in progress (Sprint 10b)
+Last updated: 2026-11-12
 Starting point: v0.5.0 (modular release, tagged)
 Target: v1.0.0
 
@@ -73,6 +73,7 @@ AMCO only has to be worth a try. A measured result slightly below the original v
 - `DEV_PROGRESS.md` holds summaries only. Detailed records stay in the local `SPRINT.md`. README changes only when requested.
 - Every new module gets an entry in `RANKS` in `tests/test_architecture.py` in the same commit. A module may import only modules with a lower rank, so give a new module a rank just above what it imports. Only relative order matters, so renumber freely.
 - From Sprint 11 on, any sprint that touches retrieval or ranking runs `amco eval run` before and after, and records the difference in the sprint review.
+- `PROGRESS.md` is the per-sprint log for 0.6 onward (what was added, changed, fixed, tested, and acceptance results). `DEV_PROGRESS.md` keeps Sprints 1 to 9 and receives only short summaries.
 
 ### 4.2 Standard close-out (the last tasks of every sprint)
 
@@ -96,8 +97,8 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 
 | Sprint | New module | Imports from (must rank lower) |
 |---|---|---|
-| 10 | `storage.schema` | stdlib only (rank equal to `storage.text` is fine) |
-| 10 | `evaluation` | `ame`, `storage`, `working`, `config` |
+| 10a | `storage.schema`, `storage.backup` | stdlib only (rank 2, same as `storage.text`) |
+| 10b | `evaluation` | `ame`, `storage`, `working`, `config` (rank 9, above `ame` and `lifecycle`, same as `engine`; `cli` at 10 imports it) |
 | 11 | `summaries` | `models`, `working`, `config` |
 | 12 | `storage.vectors` | `storage.db`, `storage.memories` |
 | 12 | `semantic`, `retrieval` | `storage`, `models`, `ranking`, `config` (`ame` then ranks above `retrieval`) |
@@ -113,6 +114,7 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 - **Embeddings (Sprint 12):** kept if not worse than the FTS5 baseline by more than a tolerance set once the baseline exists (suggested starting point: no more than 0.02 lower on overall recall@5 and MRR, and a visible gain on the paraphrase subset). If they miss, they ship optional and off by default. If they cannot be made stable on Windows and Ubuntu, they move to 1.1.
 - **Tuned weights and classifier (Sprint 13):** replace current defaults only if the benchmark improves on held-out queries, not only on the queries used for tuning.
 - **Capture, conflicts, maintenance:** judged by whether they work and are safe, with precision recorded. They always propose and never silently write or delete.
+- **Counting rule for every ship decision (decided in 10a):** judged by individual queries, with no more than 1 net query lost overall. Reports always show raw counts (for example `37/47`) next to any percentage. With 47 queries, one query is about 2 points, so percentages alone mislead.  
 
 ---
 
@@ -120,7 +122,7 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 
 | Version | Theme | Planned sprints |
 |---|---|---|
-| 0.6 | Measure and structure | 10, 11, reserve |
+| 0.6 | Measure and structure | 10 (10a, 10b), 11 (11a, 11b), reserve |
 | 0.7 | Retrieval | 12 (12a, 12b, 12c), 13, reserve |
 | 0.8 | Capture | 14, 15, reserve |
 | 0.9 | Conflicts and maintenance | 16, 17, reserve |
@@ -140,40 +142,56 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 
 ### Design decisions (settle first)
 
-- **D1 Fixture format.** One JSON file. Memories are referenced by a stable `key`, never a database ID.
-- **D2 Where it lives.** New package `src/amco/evaluation/` (`fixtures.py`, `metrics.py`, `runner.py`, `store.py`, `report.py`) and a CLI group in `src/amco/cli/evaluation.py`.
-- **D3 What is measured.** Two views per query: the ranked candidates (retrieval quality) and the memories actually selected for the prompt (what the model sees).
+- **D1 Fixture format.** One JSON file. Memories are referenced by a stable `key`, never a database ID. Expiry is written as `expires_in_days` (relative to the run date, negative means already expired), never as an absolute date, so fixtures never rot.
+- **D2 Where it lives.** New package `src/amco/evaluation/`: `fixture_types.py` (data), `fixture_parse.py` (validation), `fixtures.py` (loading and hashing), `metrics.py`, `runner.py`, `store.py`, `report.py`. Data files live in `evaluation/datasets/` (not `fixtures/`, which would shadow `fixtures.py`). CLI group in `src/amco/cli/evaluation.py`.
+- **D3 What is measured.** Two views per query: the ranked candidates (retrieval quality, not subject to `forbid`) and the memories actually selected for the prompt (what the model sees, where `forbid` applies).
 - **D4 Default k.** 5, which matches `DEFAULT_DEPTH`.
 - **D5 Migration design.** `PRAGMA user_version` holds the schema version. Version 0 means "unversioned" (every 0.1 to 0.5 database). Migration 1 upgrades any unversioned database to the current 0.5 schema.
 - **D6 Where baselines are kept.** The committed baseline result lives in `benchmarks/` in the repo. Ad hoc runs are saved under the local eval directory.
+- **D7 Split.** Sprint 10 is split into 10a (S10-01 to S10-10, S10-26 to S10-29 for the storage parts: schema, backup, migrations) and 10b (fixtures, metrics, runner, store, report, CLI, baseline).
+- **D8 Metric conventions.** Undefined is `None`, never 0 or 1, so negative queries drop out of recall, MRR and precision. A "hit" means every expected key is in the top k. Precision divides by results returned, not by k. Repeated keys count once. Rates are `Ratio` objects that always print raw counts.
+- **D9 `forbid`.** Queries have an optional `forbid` list of keys that must not be selected. Without it, the `superseded`, `expired` and `duplicate` tags could only prove the right memory appeared.
+- **D10 Freeze.** Fixtures are frozen at the end of 10b for the 0.6 version. Any later change needs a recorded re-baseline. After v1.0 the set is re-evaluated using paraphrased versions of real chat history.
+- **D11 Split labels.** Every query is tagged `train` or `dev` now (about 30% dev), before anyone sees results, so Sprint 13's overfitting guard is honest and needs no re-baseline.
 
 ### Tasks
 
+**10b delivery steps**
+
+| Step | Tasks | Result |
+|---|---|---|
+| 1 | S10-11 to S10-14, `RANKS` | Fixtures load and validate; dataset packaged |
+| 2 | S10-15, S10-16 | Pure metrics; `db_path` on the AME |
+| 3 | S10-17 to S10-19 | `build_database()` and `run_suite()` produce numbers |
+| 4 | S10-20 to S10-22 | Store, compare, report |
+| 5 | S10-23 to S10-25, S10-27, S10-30, S10-31 | `amco eval ...` CLI, CI smoke, committed baseline |
+
 **Setup**
 - [ ] S10-01 Create `sprint-10` from an up-to-date `main`. Run `pytest` and note the passing count (it replaces the `<N>` placeholder in DEV_PROGRESS).
-- [ ] S10-02 Housekeeping: in `tests/test_storage_modules.py` the last test is indented inside `test_package_init_only_re_exports`, so pytest never collects it. Un-nest it and run it. If it fails, record why instead of fixing it in this sprint.
-- [ ] S10-03 Copy `tests/snapshots/schema_fingerprint.json`, `storage_operations.json` and `cli_structure.json` into `tests/snapshots/legacy/` with a `_v0.5.0` suffix before anything is regenerated.
+- [x] S10-02 Housekeeping: in `tests/test_storage_modules.py` the last test is indented inside `test_package_init_only_re_exports`, so pytest never collects it. Un-nest it and run it. If it fails, record why instead of fixing it in this sprint.
+- [x] S10-03 Copy `tests/snapshots/schema_fingerprint.json`, `storage_operations.json` and `cli_structure.json` into `tests/snapshots/legacy/` with a `_v0.5.0` suffix before anything is regenerated. Done in 10a (snapshots are in tests/snapshots/legacy/).
+
 
 **Schema versioning and migrations**
-- [ ] S10-04 Create `src/amco/storage/schema.py` with `SCHEMA_VERSION = 1`, an ordered `MIGRATIONS` list (version, description, function taking a connection), `current_version(conn)` and `migrate(conn)`.
-- [ ] S10-05 Move the body of `db._migrate` into migration 1 unchanged. Keep the ALTER order identical (`updated_at`, `memory_type`, `confidence`, `use_count`, `superseded_by`, `superseded_at`, `expires_at`, `last_used_at`) so the fresh-database schema fingerprint stays byte-identical.
-- [ ] S10-06 Rewrite `db.connect`: note whether the `memories` table already existed, create the base table if needed, read `user_version`, run pending migrations, then `_ensure_fts`. Leave `_ensure_fts` outside the numbered migrations because FTS5 availability is detected at run time and `executescript` commits implicitly.
-- [ ] S10-07 Add `SchemaError` (a plain `Exception`, not `RuntimeError`, so chat does not label it a model error). If `user_version` is higher than `SCHEMA_VERSION`, raise it with a message telling the user the database was made by a newer AMCO. Re-export it from `amco.storage`.
-- [ ] S10-08 Run each migration inside an explicit transaction and set `user_version` in the same transaction. Roll back on error. Prove this with a deliberately failing migration in a test (confirm `user_version` and the data are unchanged afterward).
-- [ ] S10-09 Pre-migration backup: when the file existed, the `memories` table existed, and a migration is pending, copy the database with `sqlite3.Connection.backup()` to `<name>.bak-v<old version>` next to it. Never overwrite an existing backup (add a timestamp suffix instead). No copy for fresh databases or when nothing is pending.
-- [ ] S10-10 Surface `SchemaError` cleanly: add a small decorator in `cli/common.py` that prints the message to `err_console` and exits with code 1, apply it to commands that open the database, and add an `except SchemaError` branch in the chat loop.
+- [x] S10-04 Create `src/amco/storage/schema.py` with `SCHEMA_VERSION = 1`, an ordered `MIGRATIONS` list (version, description, function taking a connection), `current_version(conn)` and `migrate(conn)`.
+- [x] S10-05 Move the body of `db._migrate` into migration 1 unchanged. Keep the ALTER order identical (`updated_at`, `memory_type`, `confidence`, `use_count`, `superseded_by`, `superseded_at`, `expires_at`, `last_used_at`) so the fresh-database schema fingerprint stays byte-identical.
+- [x] S10-06 Rewrite `db.connect`: note whether the `memories` table already existed, create the base table if needed, read `user_version`, run pending migrations, then `_ensure_fts`. Leave `_ensure_fts` outside the numbered migrations because FTS5 availability is detected at run time and `executescript` commits implicitly.
+- [x] S10-07 Add `SchemaError` (a plain `Exception`, not `RuntimeError`, so chat does not label it a model error). If `user_version` is higher than `SCHEMA_VERSION`, raise it with a message telling the user the database was made by a newer AMCO. Re-export it from `amco.storage`.
+- [x] S10-08 Run each migration inside an explicit transaction and set `user_version` in the same transaction. Roll back on error. Prove this with a deliberately failing migration in a test (confirm `user_version` and the data are unchanged afterward).
+- [x] S10-09 Pre-migration backup: when the file existed, the `memories` table existed, and a migration is pending, copy the database with `sqlite3.Connection.backup()` to `<name>.bak-v<old version>` next to it. Never overwrite an existing backup (add a timestamp suffix instead). No copy for fresh databases or when nothing is pending.
+- [x] S10-10 Surface `SchemaError` cleanly: add a small decorator in `cli/common.py` that prints the message to `err_console` and exits with code 1, apply it to commands that open the database, and add an `except SchemaError` branch in the chat loop.
 
 **Evaluation fixtures**
-- [ ] S10-11 `evaluation/fixtures.py`: dataclasses for fixture memories, queries and the set, `load_fixtures(path=None)`, and `fixture_hash()` (sha256 of canonical JSON).
-  - Memory fields: `key`, `content`, `category`, `memory_type`, `confidence`, `age_days`, `expires`, `supersedes` (a key), optional `use_count`.
-  - Query fields: `id`, `query`, `expect` (list of keys, empty for negative queries), `history` (bool), `turns` (earlier chat turns to seed Working Memory), `task`, `tags`, optional `expect_kind` (classifier check), optional `split` (`train` or `dev`, used in Sprint 13).
-- [ ] S10-12 Validation with clear errors: duplicate keys, empty content, unknown keys in `expect` or `supersedes`, bad types, negative `age_days`, bad dates, unknown fields.
-- [ ] S10-13 Write `evaluation/fixtures/default.json` with about 30 memories and at least 40 queries across these tags: `exact`, `stem`, `multi-term`, `paraphrase` (no word overlap, expected to miss under FTS5, at least 8), `followup` (with `turns`), `history` (long-term memories plus history cues), `superseded` (the old fact must not appear), `expired`, `duplicate`, `conflict`, `negative` (nothing relevant), `chitchat`.
-- [ ] S10-14 Packaging: add `[tool.setuptools.package-data]` for `evaluation/fixtures/*.json` in `pyproject.toml` and load via `importlib.resources`, so the default fixtures exist after a non-editable install.
+- [x] S10-11 Fixture layer in three modules: `fixture_types.py` (frozen dataclasses, closed tag set, `FixtureError`), `fixture_parse.py` (validation), `fixtures.py` (`load_fixtures(path=None)`, `canonical_json()`, `fixture_hash()`). The hash covers memories and queries only, not `name` or `description`.
+  - Memory fields: `key`, `content`, `category`, `memory_type`, `confidence`, `age_days`, `expires_in_days`, `supersedes` (a key), `use_count`.
+  - Query fields: `id`, `query`, `expect`, `forbid`, `history`, `turns`, `task`, `tags`, `expect_kind`, `split`.
+- [x] S10-12 Validation collects every problem and reports them together with locations (`queries[7] (id 'hist-02')`). Covers duplicate keys and ids, empty content, unknown keys in `expect`, `forbid` or `supersedes`, bad types, negative `age_days`, non-integer `expires_in_days`, unknown fields and tags, and labels that can never be satisfied (expecting a superseded or expired memory, `supersedes` pointing forward, two memories superseding the same one).
+- [x] S10-13 `evaluation/datasets/default.json`: 30 memories and 47 queries (14 `dev`), 10 paraphrase queries, tags `exact`, `stem`, `multi-term`, `paraphrase`, `followup`, `assistant-followup`, `history`, `superseded`, `expired`, `duplicate`, `conflict`, `negative`, `chitchat`. A test proves paraphrase queries share no crudely stemmed terms with their targets. Two deliberate known misses: `follow-05` (topic only in an assistant reply, a Sprint 13 target) and `chat-04` ("okay cool", not matched by the greeting regex). Sprint 11 adds the `ltm` tag.
+- [x] S10-14 Packaging: `[tool.setuptools.package-data]` with `amco = ["evaluation/datasets/*.json"]` in `pyproject.toml`, loaded via `importlib.resources`, with a test that checks the declaration and the packaged file.
 
 **Metrics and runner**
-- [ ] S10-15 `evaluation/metrics.py` (pure functions): `recall_at_k`, `reciprocal_rank`, `precision_at_k`, `percentile`, plus aggregation. Convention: negative queries are excluded from recall and MRR and counted in a separate `false_inclusion` rate (any memory selected when none was expected).
-- [ ] S10-16 Add an optional `db_path` argument to `ame.retrieve()` and `ame.prepare()`, passed down to `search_memories`. Default behavior is unchanged. This is how the harness targets a temp database without touching the environment.
+- [x] S10-15 `evaluation/metrics.py` (standard library only, enforced by a test): `recall_at_k`, `is_hit`, `reciprocal_rank`, `precision_at_k`, `forbidden_hits`, `has_false_inclusion`, `percentile`, `mean_defined`, `describe`, and the `Ratio` type. Conventions are in D8.
+- [x] S10-16 Optional trailing `db_path` on `ame.retrieve()` and `ame.prepare()`, passed to `search_memories`. Default behavior and storage SQL unchanged (contract snapshots stay identical). `engine.answer()` deliberately does not get it: the harness bypasses `answer()`, and Sprint 12 replaces the argument with `RetrievalOptions`.
 - [ ] S10-17 `evaluation/runner.py`, `build_database(fixtures, path)`: create memories with `add_memory`, resolve `supersedes` keys, and backdate `created_at` and `updated_at` from `age_days` with a documented `UPDATE` through `storage.session`. Return a `{key: id}` map.
 - [ ] S10-18 `run_suite(fixtures, k, db_path=None)`: for each query create a fresh `WorkingMemory` (seed `turns` and `task`), call `ame.prepare`, map candidate and selected IDs back to keys, and record kind, memory tokens, prompt tokens, retrieval ms and total ms. Never call `ame.finish`, so `use_count` stays untouched and runs are repeatable.
 - [ ] S10-19 Aggregate overall and per tag: recall@k and MRR for candidates and for selected memories, false-inclusion rate, classifier accuracy when `expect_kind` is present, mean and max memory tokens, and latency mean, p50 and p95.
@@ -189,14 +207,14 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 - [ ] S10-25 Add a CI smoke step after the non-editable install: run `amco eval run` (FTS only, no Ollama).
 
 **Architecture and contracts**
-- [ ] S10-26 Add `"storage.schema"` and `"evaluation"` to `RANKS`.
-- [ ] S10-27 Regenerate `storage_operations.json` and `cli_structure.json` deliberately. Expect the per-connect statement list to change: `PRAGMA table_info` and the `UPDATE ... updated_at` statement no longer run on every connect, and a `PRAGMA user_version` read appears. Update `test_command_names_and_order_are_stable` for the new group and its position (read the regenerated snapshot rather than guessing the order).
+- [x] S10-26 `storage.schema` and `storage.backup` added to `RANKS` in 10a; `evaluation` added at rank 9 in 10b Step 1.
+- [ ] S10-27 Regenerate `storage_operations.json` and `cli_structure.json` deliberately. Expect the per-connect statement list to change: `PRAGMA table_info` and the `UPDATE ... updated_at` statement no longer run on every connect, and a `PRAGMA user_version` read appears. Update `test_command_names_and_order_are_stable` for the new group and its position (read the regenerated snapshot rather than guessing the order). (storage parts done in 10a; CLI snapshot regeneration happens in Step 5 when the eval group is added)
 - [ ] S10-28 Verify `schema_fingerprint.json` is unchanged. `user_version` lives in the database header, not in `sqlite_master`, so a changed fingerprint means a bug.
 - [ ] S10-29 Update the public-surface contract tests with the new names (`SchemaError`, evaluation functions).
 
 **Baseline and docs**
 - [ ] S10-30 Run `amco eval run --save fts-baseline --out benchmarks/fts-baseline-0.6.json`. Commit the JSON. Record the headline numbers in DEV_PROGRESS.
-- [ ] S10-31 Add a short "How to extend the fixtures" note to SPRINT.md.
+- [ ] S10-31 Add a short "How to extend the fixtures" note to SPRINT.md. It must cover: add a memory then a query; keep `expect` and `forbid` to keys; tag every query from the closed tag set (`KNOWN_TAGS` in `fixture_types.py`); assign `train` or `dev`; never edit after the freeze without a recorded re-baseline.
 
 ### Tests to add
 
@@ -206,6 +224,8 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 - `tests/test_eval_store.py`: save, load, compare, bad names rejected, mismatched hash refused.
 - `tests/test_migrations.py`: fresh database ends at the latest version, an unversioned Sprint 1 database migrates with its data, reopening does nothing, backup created exactly once and not for fresh databases, a newer-version database raises `SchemaError`, a failing migration rolls back.
 - `tests/test_cli_eval.py`: `eval run` with a tiny `--fixtures` file, `--save` and `compare`, `--min-recall` exit code.
+- `tests/test_ame_db_path.py`: the given database is used and the configured one is never opened, chitchat still skips retrieval, `prepare` alone never counts usage, default behavior unchanged.
+- `tests/test_backup.py` and `tests/test_cli_schema.py` (delivered in 10a).
 
 ### Acceptance criteria
 
@@ -216,6 +236,8 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 5. The FTS5 baseline is committed and recorded in DEV_PROGRESS.
 6. The schema fingerprint is unchanged, and the other changed snapshots were regenerated deliberately.
 7. Tests pass without Ollama, and CI is green on all four combinations.
+
+Criteria 3, 4 and 6 are covered by Sprint 10a. Criteria 1, 2 and 5 close in 10b Step 5.
 
 **Demo:** `amco eval run --save baseline`, then `amco eval run --verbose` and read the paraphrase misses.
 
@@ -766,3 +788,13 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 | 2026-10-24 | Consolidation undo changed to "delete the merged memory or restore originals" | `restore_memory` revives one memory at a time, while `delete_memory` revives everything the deleted memory replaced |
 | 2026-10-24 | Eval harness takes `db_path` instead of setting an environment variable | `test_only_config_reads_the_environment` forbids `os.environ` outside `config.py` |
 | 2026-10-24 | Sprint 12 pre-split into 12a, 12b, 12c | Riskiest sprint; split keeps each branch demonstrable |
+| 2026-10-30 | Sprint 10 split into 10a (schema, migrations, backup) and 10b (evaluation) | Each half is demonstrable and mergeable alone |
+| 2026-10-30 | Ship counting rule: judged by individual queries, at most 1 net query lost, raw counts beside percentages | 47 queries means one query is about 2 points |
+| 2026-10-30 | Fixture expiry is `expires_in_days` (relative); fixtures frozen per version at the end of 10b | Fixtures must not rot; changes after the freeze need a recorded re-baseline |
+| 2026-10-30 | Query field `forbid` added | `superseded`, `expired` and `duplicate` cases must assert absence |
+| 2026-10-30 | Dataset folder `evaluation/datasets/` instead of `evaluation/fixtures/` | Avoids shadowing `fixtures.py` |
+| 2026-10-30 | `train`/`dev` split assigned in 10b instead of Sprint 13 | Splitting before results are seen keeps the overfitting guard honest and avoids a re-baseline |
+| 2026-10-30 | Fixture layer split into `fixture_types.py`, `fixture_parse.py`, `fixtures.py` | One job per module |
+| 2026-10-30 | Metric conventions fixed: undefined is `None`; a hit needs every expected key in the top k; precision divides by returned results | Negatives must drop out of averages; the ship rule needs a binary per query |
+| 2026-10-30 | `db_path` added to `ame.retrieve()` and `ame.prepare()` only, not `engine.answer()` | The harness bypasses `answer()`; Sprint 12 replaces the argument with `RetrievalOptions` |
+| 2026-11-12 | `PROGRESS.md` introduced as the 0.6 to 1.0 sprint log | `DEV_PROGRESS.md` stays as the Sprints 1 to 9 history |

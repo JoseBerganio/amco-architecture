@@ -2,7 +2,7 @@
 
 A local-first memory layer for local LLMs. AMCO stores information outside the model, retrieves only what is relevant to the current question, and fits it into the model's context window.
 
-**Status:** early prototype (v0.5.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Version 0.5 reorganized the code into packages and added a model adapter interface, with no change to the commands or the database. Semantic search and automatic memory management are still to come.
+**Status:** early prototype (v0.5.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Version 0.5 reorganized the code into packages and added a model adapter interface, with no change to the commands or the database. Semantic search and automatic memory management are still to come. The `main` branch is moving toward 0.6: schema versioning with automatic pre-upgrade backups is merged, and an evaluation harness is being built. The released version is still 0.5.0.
 
 ## Why AMCO
 
@@ -17,6 +17,8 @@ Local models have a limited context window and forget everything between session
 - **Context budgeting**: retrieved memories are selected to fit a token budget, and a memory is skipped rather than cut short.
 - **Memory hygiene**: identical memories are blocked, similar ones are flagged, outdated memories can be superseded (hidden but kept and restorable), and memories can expire.
 - **Lifecycle review**: `amco memory review` suggests deleting expired or long-superseded memories, archiving idle ones, and promoting well-used ones. Nothing changes unless you pass `--apply`.
+- **Safe database upgrades** *(on `main`, ships in 0.6)*: the schema is versioned. Before a real upgrade AMCO copies the database to `<name>.bak-v<old version>` next to it and never overwrites an existing backup. A failed upgrade rolls back, and a database made by a newer AMCO is refused with a clear message instead of being damaged.
+- **Evaluation fixtures and metrics** *(on `main`, not yet usable from the CLI)*: a validated benchmark of 30 memories and 47 queries plus retrieval metrics (recall@k, MRR, precision). The `amco eval` commands arrive in a later 0.6 sprint.
 - **Local model through an adapter**: talks to Ollama by default (Qwen 2.5 3B, 4-bit quantized). The engine depends on a small `ChatModel` interface rather than on Ollama itself, so other runtimes can be added without touching the memory logic.
 - **Memories are treated as data, not instructions**: the system prompt tells the model not to follow instructions found inside retrieved memories.
 - **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, supersede, and delete any of them.
@@ -49,9 +51,11 @@ ollama pull qwen2.5:3b
 amco init
 ```
 
-### Upgrading from 0.2.x
+### Upgrading
 
-No action needed. Version 0.5 does not change the database, the commands, or their output.
+**From 0.2.x to 0.5.0:** no action needed. Version 0.5 does not change the database, the commands, or their output.
+
+**On `main` (before 0.6 is released):** the first time a database from 0.5 or earlier is opened, AMCO stamps it with a schema version and saves a backup named `<database file>.bak-v0` next to it. Backups are never deleted automatically. A database upgraded by `main` is refused by older builds only if a later migration changes the schema.
 
 ```bash
 cp ~/.amco/amco.sqlite3 ~/.amco/amco.sqlite3.bak                      # macOS/Linux
@@ -155,25 +159,26 @@ src/amco/
 ├── ranking.py     # Scoring formula
 ├── working.py     # Working Memory and token estimation
 ├── cli/           # Typer commands: system, memory group, chat loop
+├── evaluation/    # Benchmark fixtures, validation and retrieval metrics (runner and reports coming)
+│   └── datasets/  # Packaged default benchmark (default.json)
 ├── models/        # Model adapter interface and the Ollama adapter
-└── storage/       # SQLite: connection and FTS5 setup, records, hygiene, search
+└── storage/       # SQLite: connection, schema versioning, backups, records, hygiene, search
 tests/             # pytest suite, including contract tests and snapshots
 .github/workflows/ci.yml   # CI on Ubuntu and Windows, Python 3.11 and 3.13
 ```
 
 ## Roadmap
 
-| Sprint | Focus | Status |
-|--------|-------|--------|
-| 1 | Project foundation and CLI | Done |
-| 2 | SQLite storage and memory commands | Done |
-| 3 | Working Memory, context budgeting, local model | Done |
-| 4 | Full-text search and ranking | Done (0.2) |
-| 5 | Adaptive Memory Engine, memory hygiene, lifecycle review | Done (0.2) |
-| 6 to 9 | Modularization: CLI, storage and model-adapter packages, central config, CI | Done (0.5) |
-| Next | Automatic memory capture, smarter retrieval, TOML config, `stats`/`models`/`config` commands | Planned |
+| Version | Focus | Status |
+|---------|-------|--------|
+| 0.1 to 0.5 | Foundation, storage, Working Memory, search and ranking, AME, hygiene, modular refactor | Done |
+| 0.6 | Measure and structure: safe migrations (done), evaluation harness (in progress), real Long-Term Memory | In progress |
+| 0.7 | Embeddings and hybrid retrieval, tuned ranking, better follow-ups and classifier | Planned |
+| 0.8 | Capture: proposals inbox, secret screening, capture from chat | Planned |
+| 0.9 | Conflict classification and resolution, near-duplicates and consolidation | Planned |
+| 1.0 | Final evaluation, hardening, release | Planned |
 
-See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the development log and what comes next.
+See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log and [DEV_PROGRESS.md](DEV_PROGRESS.md) for Sprints 1 to 9. The detailed plan is in `SPRINT.md`.
 
 ## Known limitations
 
@@ -181,12 +186,14 @@ See [DEV_PROGRESS.md](DEV_PROGRESS.md) for the development log and what comes ne
 - Overlapping memories are flagged to the model using a term-overlap heuristic, which cannot tell a contradiction from a complementary fact.
 - The request classifier is rule-based and English-only.
 - Short follow-up questions borrow terms from your recent messages and pinned task, but not from the model's replies.
-- Ranking weights are untuned defaults.
+- Ranking weights are untuned defaults (tuning is planned for 0.7, using the benchmark).
 - Token counts are estimates (about 4 characters per token).
 - Older chat turns are dropped, not summarized.
 - Memories are never saved automatically; use `amco memory add` or `/remember`.
 - A 3B model may sometimes ignore or misuse retrieved memories. Use `/why` and the retrieved IDs shown after each answer to tell retrieval problems from model problems.
 - Only the Ollama adapter is implemented so far; the adapter interface is in place for others.
+- Retrieval quality has no published numbers yet. The benchmark exists, but the runner and the committed baseline arrive in Sprint 10b.
+- Backups are only made automatically before a schema upgrade. There are no export or import commands yet.
 
 ## Privacy
 

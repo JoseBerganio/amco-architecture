@@ -3,7 +3,7 @@
 Record of each sprint on the road from v0.5.0 to v1.0.0: what was added, changed, fixed and tested, and what comes next.
 
 Plan: `SPRINT.md` (local). Earlier history (Sprints 1 to 9, releases 0.1 to 0.5): `DEV_PROGRESS.md`.
-Last updated: 2026-10-30
+Last updated: 2026-11-12
 
 ## How to use this file
 
@@ -17,8 +17,8 @@ Last updated: 2026-10-30
 
 | Version | Sprint | Focus | Status |
 |---------|--------|-------|--------|
-| 0.6 | 10a | Schema versioning, safe migrations, backup | In progress (merge pending CI) |
-| 0.6 | 10b | Evaluation harness and FTS5 baseline | Not started |
+| 0.6 | 10a | Schema versioning, safe migrations, backup | Done (confirm merge and green CI before ticking its boxes) |
+| 0.6 | 10b | Evaluation harness and FTS5 baseline | In progress (Steps 1 and 2 of 5 committed) |
 | 0.6 | 11 (11a, 11b) | Real Long-Term Memory | Not started |
 | 0.7 | 12 (12a, 12b, 12c), 13 | Embeddings, hybrid retrieval, tuning | Not started |
 | 0.8 | 14, 15 | Capture inbox and screening | Not started |
@@ -34,7 +34,7 @@ Last updated: 2026-10-30
 - **Version:** 0.6 series (release happens after Sprint 11, per `SPRINT.md`)
 - **Sprint:** 10a (first half of the original Sprint 10; 10b is the evaluation harness)
 - **Branch:** `sprint-10a`
-- **Status:** Code complete, awaiting final checks and merge
+- **Status:** Code complete. Acceptance boxes below are ticked only after `pytest` and CI are confirmed green on `main`.
 - **Depends on:** v0.5.0 (tagged)
 
 ### Goal
@@ -101,11 +101,97 @@ Existing tests changed only in their expectations about this sprint's work: `tes
 
 ### What's Next
 
-Sprint 10b — evaluation harness and FTS5 baseline (S10-11 to S10-25, S10-30, S10-31), with these decisions already made:
+Sprint 10b (see the next section). The decisions recorded at the end of 10a (ship rule, `expires_in_days`, fixtures frozen per version) were carried out as planned.
 
-- Ship rule for measured changes: judged by individual queries, with no more than 1 net query lost overall. Reports show raw counts (for example `37/40`) next to any percentage.
-- Fixture expiry is written as `expires_in_days` (relative), never as an absolute date.
-- Fixture queries are written as they are for now. After v1.0 the set will be re-evaluated using paraphrased versions of real chat history.
-- Fixtures are frozen at the end of 10b for the 0.6 version, and any later change needs a recorded re-baseline.
+---
 
-First step: S10-11 to S10-14 (fixture dataclasses, validation, `expires_in_days`, the default fixture file and its packaging).
+
+## Sprint 10b — Evaluation harness and FTS5 baseline
+
+### Version and sprint
+
+- **Version:** 0.6 series
+- **Sprint:** 10b (second half of the original Sprint 10)
+- **Branch:** `sprint-10b`
+- **Status:** In progress. Steps 1 and 2 of 5 are committed. Steps 3 to 5 are not started.
+- **Depends on:** Sprint 10a
+
+### Goal
+
+Make retrieval quality measurable before anything else changes it. By the end of this sprint `amco eval run` reports recall@k, MRR, tokens and latency on a fixed benchmark, runs can be saved and compared, and an FTS5 baseline is committed in `benchmarks/`.
+
+### Delivery plan
+
+| Step | Tasks | Result | Status |
+|------|-------|--------|--------|
+| 1 | S10-11 to S10-14 | Fixtures load, validate and package | Committed |
+| 2 | S10-15, S10-16 | Pure metrics; `db_path` on the AME | Committed |
+| 3 | S10-17 to S10-19 | `build_database()` and `run_suite()` produce numbers | Not started |
+| 4 | S10-20 to S10-22 | Store, compare, report | Not started |
+| 5 | S10-23 to S10-25, S10-27, S10-30, S10-31 | `amco eval` CLI, CI smoke step, committed baseline | Not started |
+
+### Added
+
+**Step 1: fixtures**
+
+- `src/amco/evaluation/` package, built as three small modules plus the public `__init__`:
+  - `fixture_types.py`: frozen dataclasses (`FixtureMemory`, `FixtureQuery`, `FixtureTurn`, `FixtureSet`), `FixtureError`, and a closed set of 13 tags (`KNOWN_TAGS`), so a typo cannot silently drop a query from its report.
+  - `fixture_parse.py`: pure validation. It collects every problem and reports them together with locations such as `queries[7] (id 'hist-02')`. It also rejects labels that can never be satisfied: expecting a superseded or expired memory, `supersedes` pointing at a memory defined later, two memories superseding the same one, a `negative` or chitchat query that expects memories.
+  - `fixtures.py`: `load_fixtures()` (packaged default or a path, BOM-tolerant), `canonical_json()` and `fixture_hash()`. The hash covers memories and queries only, so editing the name or description never invalidates saved runs.
+- `src/amco/evaluation/datasets/default.json`: 30 memories and 47 queries (14 `dev`, about 30%), 10 paraphrase queries, all 12 required tags plus `assistant-followup`. Two deliberate known misses: `follow-05` (topic only in an assistant reply) and `chat-04` ("okay cool").
+- New optional query field `forbid`: keys that must not be selected, so the `superseded`, `expired` and `duplicate` cases can assert absence.
+- `expires_in_days` (relative) replaces absolute expiry dates, so fixtures never rot.
+- `train`/`dev` split assigned now, before any results exist.
+- `pyproject.toml`: `[tool.setuptools.package-data]` so the dataset exists after a non-editable install.
+- `tests/test_architecture.py`: `evaluation` added to `RANKS` at rank 9.
+
+**Step 2: metrics and `db_path`**
+
+- `src/amco/evaluation/metrics.py` (standard library only, enforced by a test): `recall_at_k`, `is_hit`, `reciprocal_rank`, `precision_at_k`, `forbidden_hits`, `has_false_inclusion`, `percentile` (linear interpolation), `mean_defined`, `describe`, and the `Ratio` type, which always prints raw counts, for example `37/47 (78.7%)`.
+- Conventions: undefined metrics are `None`, so negative queries drop out of averages; a hit needs every expected key in the top k; precision divides by results returned, not by k; repeated keys count once.
+- `ame.retrieve()` and `ame.prepare()` accept an optional trailing `db_path`, passed to `search_memories`. This is how the harness will target a temporary database without touching the environment.
+
+### Changed
+
+- `src/amco/ame.py`: `from pathlib import Path` added; `retrieve()` and `prepare()` gained `db_path`. Nothing removed, no new SQL.
+- `src/amco/evaluation/__init__.py`: re-exports the fixture and metrics names.
+- Unchanged on purpose: the CLI command tree, the schema fingerprint, the storage-operations snapshot, `engine.answer()`, and all retrieval behavior.
+
+### Fixed
+
+- Nothing fixed in this sprint so far.
+
+### Tests
+
+New files (all run without Ollama):
+
+- `tests/test_eval_fixtures.py` (`<N>` tests): packaged dataset present and declared in `pyproject.toml`; planned size and tag coverage; train/dev split near 30%; paraphrase queries share no crudely stemmed terms with their targets; hash is stable and ignores name and description; hash changes with content; defaults and stripping; a 23-case validation matrix; two-memories-superseding-one; every problem reported at once; BOM, missing and malformed files; errors name the file.
+- `tests/test_eval_metrics.py` (`<N>` tests): standard-library-only guard; recall, hit, reciprocal rank and precision edge cases (empty expectations, k larger than results, repeated keys, invalid k); forbidden hits and false inclusion; `Ratio` formatting; percentile maths and `describe`.
+- `tests/test_ame_db_path.py` (5 tests): the given database is used and the configured one is never opened; `retrieve` accepts `db_path`; chitchat still skips retrieval; `prepare` alone never counts usage; default behavior unchanged.
+
+Existing tests changed: only `tests/test_architecture.py` (one new `RANKS` entry).
+
+Fixture hash of `default.json` at Step 1: `<12 hex chars from the verify command>`.
+Passing test count after Step 2: `<N>`.
+
+### Acceptance Criteria
+
+- [ ] `amco eval run` prints recall@k, MRR, tokens and latency, overall and per tag, and can save the run. *(Step 5)*
+- [ ] `amco eval compare` shows metric deltas and which queries flipped. *(Steps 4 and 5)*
+- [ ] The FTS5 baseline is committed in `benchmarks/` and its headline numbers are recorded here. *(Step 5)*
+- [ ] The schema fingerprint is unchanged, and the CLI and storage snapshots were regenerated deliberately with diffs reviewed. *(Step 5 for the CLI snapshot)*
+- [ ] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13.
+- [x-when-verified] Fixtures load, validate and survive a non-editable install. *(Step 1: tick after the packaging check in a clean venv)*
+- [x-when-verified] `db_path` works and the storage, CLI and schema contract snapshots are unchanged. *(Step 2: tick after running the three contract tests with no regeneration)*
+
+### Decisions made in this sprint
+
+- Ship rule: judged by individual queries, no more than 1 net query lost overall, raw counts beside percentages.
+- Labels are my reading of the code, not ground truth. When the first run appears in Step 3, each surprising hit or miss is decided explicitly as a real weakness (keep the label) or a wrong label (fix and record), before the freeze.
+- `ContextReport.candidates` holds at most `limit + 3` entries and is taken before duplicate removal, so the runner computes candidate metrics and selected-memory metrics separately and applies `forbid` only to the selected view.
+- `conflict-01` and `conflict-02` need both memories in the top k. Check per-query recall before concluding retrieval is broken.
+- Fixtures are frozen at the end of 10b for 0.6.
+
+### What's Next
+
+Step 3 (S10-17 to S10-19): `build_database()` with the backdating `UPDATE` and a key-to-ID map, `run_suite()` that creates a fresh Working Memory per query and never calls `ame.finish`, and aggregation overall and per tag. First real recall and MRR numbers appear here, along with the first look at which labels were wrong.
