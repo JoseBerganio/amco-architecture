@@ -17,7 +17,7 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-"""AMCO evaluation harness: fixtures now; metrics, runner and reports in later steps.
+"""AMCO evaluation harness: fixtures and metrics now; runner, store and reports in later steps.
 
 Everything public is re-exported here.
 """
@@ -35,15 +35,42 @@ from .fixture_types import (
 )
 from .fixtures import canonical_json, fixture_hash, load_fixtures
 
+from .metrics import (
+    Distribution,
+    Ratio,
+    describe,
+    forbidden_hits,
+    has_false_inclusion,
+    is_hit,
+    mean_defined,
+    percentile,
+    precision_at_k,
+    ratio,
+    recall_at_k,
+    reciprocal_rank,
+)
+
 __all__ = [
     "KNOWN_TAGS",
+    "Distribution",
     "FixtureError",
     "FixtureMemory",
     "FixtureQuery",
     "FixtureSet",
     "FixtureTurn",
+    "Ratio",
     "canonical_json",
+    "describe",
     "fixture_hash",
+    "forbidden_hits",
+    "has_false_inclusion",
+    "is_hit",
     "load_fixtures",
+    "mean_defined",
     "parse_fixtures",
+    "percentile",
+    "precision_at_k",
+    "ratio",
+    "recall_at_k",
+    "reciprocal_rank",
 ]
