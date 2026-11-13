@@ -58,7 +58,7 @@
     {"id": "para-06", "query": "How much text fits in a single prompt?", "expect": ["context-window"], "tags": ["paraphrase"], "split": "train"},
     {"id": "para-07", "query": "How often do we ship new versions?", "expect": ["release-cadence"], "tags": ["paraphrase"], "split": "dev"},
     {"id": "para-08", "query": "What is the rule for pushing changes to the trunk?", "expect": ["branch-policy"], "tags": ["paraphrase"], "split": "train"},
-    {"id": "para-09", "query": "Which legal terms let others reuse the software?", "expect": ["license"], "tags": ["paraphrase"], "split": "dev"},
+    {"id": "para-09", "query": "Which conditions allow others to reuse the software?", "expect": ["license"], "tags": ["paraphrase"], "split": "dev"},
     {"id": "para-10", "query": "Where does the pre-production environment live?", "expect": ["deploy-host"], "tags": ["paraphrase"], "split": "train"},
 
     {"id": "follow-01", "query": "Is it fast?", "expect": ["db-engine"], "tags": ["followup"], "expect_kind": "followup", "split": "train",

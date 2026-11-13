@@ -48,16 +48,25 @@ SURFACE = {
     ],
     "amco.working": ["WorkingMemory", "Turn", "estimate_tokens"],
     "amco.lifecycle": ["Finding", "review", "apply_finding"],
-    "amco.config": [
+        "amco.config": [
         "model_name", "ollama_url", "int_env", "float_env", "context_settings",
         "freshness_half_life_days", "followup_settings", "lifecycle_settings",
-        "DEFAULT_TIMEOUT_SECONDS",
+        "DEFAULT_TIMEOUT_SECONDS", "eval_dir", "set_amco_variables",
     ],
     "amco.storage.schema": [
         "SCHEMA_VERSION", "SchemaError", "Migration", "MIGRATIONS",
         "latest_version", "current_version", "pending", "migrate",
     ],
     "amco.storage.backup": ["backup_path", "backup_database"],
+    "amco.evaluation": [
+        "load_fixtures", "fixture_hash", "parse_fixtures", "FixtureError",
+        "build_database", "run_suite", "score_query", "summarize",
+        "recall_at_k", "reciprocal_rank", "Ratio",
+        "SavedRun", "RunMeta", "RunError", "collect_meta",
+        "save_run", "load_run", "list_runs", "write_run_file", "load_run_file",
+        "compare_runs", "Comparison",
+        "render_run", "render_comparison", "render_run_list",
+    ],
 }
 
 CASES = [(module, name) for module, names in SURFACE.items() for name in names]

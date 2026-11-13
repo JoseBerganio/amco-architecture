@@ -90,7 +90,9 @@ def test_paraphrase_queries_share_no_terms_with_their_targets():
         if "paraphrase" not in q.tags:
             continue
         for key in q.expect:
-            shared = stems(q.query) & stems(by_key[key].content)
+            target = by_key[key]
+            # The FTS5 index covers category as well as content, so both count.
+            shared = stems(q.query) & stems(f"{target.content} {target.category}")
             assert not shared, f"{q.id} shares {shared} with {key}"
 
 
@@ -235,3 +237,24 @@ def test_validation_errors_name_the_file(tmp_path: Path):
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(FixtureError, match="f.json"):
         load_fixtures(path)
+        
+
+def test_turns_must_start_with_a_user_turn():
+    def change(d):
+        d["queries"][0]["turns"] = [
+            {"role": "assistant", "content": "hello"},
+            {"role": "user", "content": "hi"},
+        ]
+
+    with pytest.raises(FixtureError, match="must start with a user turn"):
+        parse_fixtures(_mutate(change))
+
+
+def test_turns_that_start_with_a_user_turn_are_accepted():
+    def change(d):
+        d["queries"][0]["turns"] = [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+        ]
+
+    assert len(parse_fixtures(_mutate(change)).queries[0].turns) == 2

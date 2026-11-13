@@ -177,6 +177,11 @@ def _parse_turns(raw: dict, where: str) -> tuple[FixtureTurn, ...]:
                 content=_text(item, "content", spot),
             )
         )
+    if turns and turns[0].role != "user":
+        raise FixtureError(
+            f"{where}: 'turns' must start with a user turn "
+            f"(Working Memory drops a leading assistant turn)"
+        )
     return tuple(turns)
 
 
