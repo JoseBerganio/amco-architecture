@@ -17,13 +17,20 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-"""AMCO evaluation harness: fixtures and metrics now; runner, store and reports in later steps.
+"""AMCO evaluation harness: fixtures, metrics, database builder, runner, scoring.
 
-Everything public is re-exported here.
+Store, compare and report arrive in Step 4. Everything public is re-exported here.
 """
 
 from __future__ import annotations
 
+from .aggregate import (
+    build_suite_result,
+    summarize,
+    summarize_by_split,
+    summarize_by_tag,
+)
+from .build import build_database
 from .fixture_parse import parse_fixtures
 from .fixture_types import (
     KNOWN_TAGS,
@@ -34,7 +41,6 @@ from .fixture_types import (
     FixtureTurn,
 )
 from .fixtures import canonical_json, fixture_hash, load_fixtures
-
 from .metrics import (
     Distribution,
     Ratio,
@@ -49,8 +55,19 @@ from .metrics import (
     recall_at_k,
     reciprocal_rank,
 )
+from .results import (
+    Observation,
+    QueryResult,
+    SuiteResult,
+    Summary,
+    ViewScores,
+    ViewSummary,
+)
+from .runner import DEFAULT_K, run_query, run_suite, select_queries
+from .scoring import score_query
 
 __all__ = [
+    "DEFAULT_K",
     "KNOWN_TAGS",
     "Distribution",
     "FixtureError",
@@ -58,7 +75,15 @@ __all__ = [
     "FixtureQuery",
     "FixtureSet",
     "FixtureTurn",
+    "Observation",
+    "QueryResult",
     "Ratio",
+    "SuiteResult",
+    "Summary",
+    "ViewScores",
+    "ViewSummary",
+    "build_database",
+    "build_suite_result",
     "canonical_json",
     "describe",
     "fixture_hash",
@@ -73,4 +98,11 @@ __all__ = [
     "ratio",
     "recall_at_k",
     "reciprocal_rank",
+    "run_query",
+    "run_suite",
+    "score_query",
+    "select_queries",
+    "summarize",
+    "summarize_by_split",
+    "summarize_by_tag",
 ]
