@@ -66,7 +66,9 @@ SURFACE = {
         "save_run", "load_run", "list_runs", "write_run_file", "load_run_file",
         "compare_runs", "Comparison",
         "render_run", "render_comparison", "render_run_list",
+        "check_gates", "check_name",
     ],
+    "amco.cli.evaluation": ["eval_app", "handle_eval_errors"],
 }
 
 CASES = [(module, name) for module, names in SURFACE.items() for name in names]

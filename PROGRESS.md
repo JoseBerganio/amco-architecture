@@ -195,3 +195,6 @@ Passing test count after Step 2: `<N>`.
 ### What's Next
 
 Step 3 (S10-17 to S10-19): `build_database()` with the backdating `UPDATE` and a key-to-ID map, `run_suite()` that creates a fresh Working Memory per query and never calls `ame.finish`, and aggregation overall and per tag. First real recall and MRR numbers appear here, along with the first look at which labels were wrong.
+
+
+Temporarily Stopped. No. 6 of Step 5 is yet to be implemented.

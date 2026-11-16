@@ -43,6 +43,7 @@ from .fixture_types import (
     FixtureTurn,
 )
 from .fixtures import canonical_json, fixture_hash, load_fixtures
+from .gates import check_gates
 from .metadata import collect_meta, fts5_available
 from .metrics import (
     Distribution,
@@ -118,6 +119,7 @@ __all__ = [
     "build_database",
     "build_suite_result",
     "canonical_json",
+    "check_gates",
     "check_name",
     "collect_meta",
     "compare_runs",

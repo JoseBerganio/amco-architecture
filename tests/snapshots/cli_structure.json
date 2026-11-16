@@ -513,6 +513,256 @@
           ]
         }
       ]
+    },
+    {
+      "name": "eval",
+      "help": "Measure retrieval quality on a fixed benchmark.",
+      "params": [],
+      "no_args_is_help": true,
+      "commands": [
+        {
+          "name": "run",
+          "help": "Run the benchmark through the real retrieval pipeline and report the results.",
+          "params": [
+            {
+              "kind": "option",
+              "name": "fixtures",
+              "opts": [
+                "--fixtures"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "path",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Fixtures file (default: the packaged benchmark)."
+            },
+            {
+              "kind": "option",
+              "name": "k",
+              "opts": [
+                "--k"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": 5,
+              "type": "int range",
+              "min": 1,
+              "max": null,
+              "is_flag": false,
+              "help": "Top-k cut-off for retrieval metrics."
+            },
+            {
+              "kind": "option",
+              "name": "tag",
+              "opts": [
+                "--tag"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Only run queries with this tag (repeatable)."
+            },
+            {
+              "kind": "option",
+              "name": "save",
+              "opts": [
+                "--save"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Save the run under this name in the eval folder."
+            },
+            {
+              "kind": "option",
+              "name": "out",
+              "opts": [
+                "--out"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "path",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Also write the run to this file (for example a committed baseline)."
+            },
+            {
+              "kind": "option",
+              "name": "overwrite",
+              "opts": [
+                "--overwrite"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Replace an existing saved run or --out file."
+            },
+            {
+              "kind": "option",
+              "name": "note",
+              "opts": [
+                "--note"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Free text stored with the run, such as a git commit."
+            },
+            {
+              "kind": "option",
+              "name": "verbose",
+              "opts": [
+                "--verbose"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "List every query that needs attention."
+            },
+            {
+              "kind": "option",
+              "name": "as_json",
+              "opts": [
+                "--json"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Print the run as JSON instead of tables."
+            },
+            {
+              "kind": "option",
+              "name": "min_recall",
+              "opts": [
+                "--min-recall"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "float range",
+              "min": 0.0,
+              "max": 1.0,
+              "is_flag": false,
+              "help": "Exit with code 1 if candidate recall@k is below this."
+            },
+            {
+              "kind": "option",
+              "name": "min_mrr",
+              "opts": [
+                "--min-mrr"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "float range",
+              "min": 0.0,
+              "max": 1.0,
+              "is_flag": false,
+              "help": "Exit with code 1 if candidate MRR is below this."
+            }
+          ]
+        },
+        {
+          "name": "compare",
+          "help": "Compare two saved runs: metric changes and which queries flipped.",
+          "params": [
+            {
+              "kind": "argument",
+              "name": "a",
+              "opts": [
+                "a"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Run before: a saved name or a file path."
+            },
+            {
+              "kind": "argument",
+              "name": "b",
+              "opts": [
+                "b"
+              ],
+              "secondary_opts": [],
+              "required": true,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Run after: a saved name or a file path."
+            },
+            {
+              "kind": "option",
+              "name": "force",
+              "opts": [
+                "--force"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Compare even if the runs used different fixtures."
+            },
+            {
+              "kind": "option",
+              "name": "check",
+              "opts": [
+                "--check"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": false,
+              "type": "boolean",
+              "min": null,
+              "max": null,
+              "is_flag": true,
+              "help": "Exit with code 1 unless the ship rule is met."
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "help": "List saved evaluation runs.",
+          "params": []
+        }
+      ]
     }
   ]
 }
