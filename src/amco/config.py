@@ -126,3 +126,17 @@ def ranking_weight_settings() -> tuple[float, float, float, float]:
         float_env("AMCO_WEIGHT_FRESHNESS", DEFAULT_WEIGHT_FRESHNESS),
         float_env("AMCO_WEIGHT_USEFULNESS", DEFAULT_WEIGHT_USEFULNESS),
     )    
+
+
+def eval_dir() -> Path:
+    """Where saved evaluation runs live (AMCO_EVAL_DIR, default: an 'eval' folder next to the database)."""
+    raw = os.getenv("AMCO_EVAL_DIR")
+    return Path(raw).expanduser() if raw else database_path().parent / "eval"
+
+
+def set_amco_variables() -> tuple[str, ...]:
+    """Names (never values) of the AMCO_* settings that are currently set.
+
+    Saved evaluation runs record this, because any of them can change the numbers.
+    """
+    return tuple(sorted(name for name in os.environ if name.startswith("AMCO_")))

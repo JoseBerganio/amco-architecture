@@ -23,11 +23,13 @@ import typer
 
 from ..engine import answer
 from .chat import run_chat
+from .evaluation import eval_app
 from .memory import memory_app
 from .system import init, version
 
 app = typer.Typer(help="AMCO — Adaptive Memory Controller", no_args_is_help=True)
 app.add_typer(memory_app, name="memory")
+app.add_typer(eval_app, name="eval")
 
 
 @app.callback()

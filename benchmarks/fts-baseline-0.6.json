@@ -1,0 +1,2312 @@
+{
+  "format_version": 1,
+  "meta": {
+    "amco_version": "0.5.0",
+    "python": "3.13.2",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "sqlite_version": "3.45.3",
+    "fts5": true,
+    "mode": "fts",
+    "ranking_weights": {
+      "relevance": 0.65,
+      "confidence": 0.15,
+      "freshness": 0.05,
+      "usefulness": 0.15
+    },
+    "half_life_days": 180.0,
+    "context": {
+      "limit": 4096,
+      "reserved_output": 512,
+      "memory_cap": 1024
+    },
+    "followup": {
+      "min_terms": 3,
+      "turns": 2
+    },
+    "retrieval": {
+      "default_depth": 5,
+      "deep_depth": 8,
+      "extra_candidates": 3
+    },
+    "tags": [],
+    "amco_variables": [],
+    "created_at": "2026-11-16T15:21:51Z",
+    "note": "46d16dc"
+  },
+  "headline": {
+    "queries": 47,
+    "candidate_hits": "27/38 (71.1%)",
+    "selected_hits": "27/38 (71.1%)",
+    "candidate_mrr": 0.7105,
+    "false_inclusion": "0/9 (0.0%)",
+    "forbid_violations": "0/4 (0.0%)"
+  },
+  "suite": {
+    "fixture_name": "default",
+    "fixture_hash": "12b8330f241d6b5741661dd6074369557472de3111eeb74d78cce1c0e005fcbd",
+    "k": 5,
+    "results": [
+      {
+        "id": "exact-01",
+        "query": "What database does the project use?",
+        "tags": [
+          "exact"
+        ],
+        "split": "train",
+        "expect": [
+          "db-engine"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What database does the project use?",
+          "candidates": [
+            "db-engine",
+            "license",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "selected": [
+            "db-engine",
+            "license",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 86,
+          "prompt_tokens": 174,
+          "retrieval_ms": 10.958399972878397,
+          "total_ms": 11.822000029496849
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "exact-02",
+        "query": "Do we use Typer or Click?",
+        "tags": [
+          "exact"
+        ],
+        "split": "train",
+        "expect": [
+          "cli-framework"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Do we use Typer or Click?",
+          "candidates": [
+            "cli-framework",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "selected": [
+            "cli-framework",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 67,
+          "prompt_tokens": 154,
+          "retrieval_ms": 6.619299994781613,
+          "total_ms": 6.963099993299693
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.3333333333333333
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.3333333333333333
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "exact-03",
+        "query": "What is the default chat model?",
+        "tags": [
+          "exact"
+        ],
+        "split": "dev",
+        "expect": [
+          "model-default"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What is the default chat model?",
+          "candidates": [
+            "model-default",
+            "test-runner"
+          ],
+          "selected": [
+            "model-default",
+            "test-runner"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 41,
+          "prompt_tokens": 130,
+          "retrieval_ms": 5.530400027055293,
+          "total_ms": 5.7419000077061355
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "exact-04",
+        "query": "How big is the context window?",
+        "tags": [
+          "exact"
+        ],
+        "split": "train",
+        "expect": [
+          "context-window"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How big is the context window?",
+          "candidates": [
+            "context-window"
+          ],
+          "selected": [
+            "context-window"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 25,
+          "prompt_tokens": 113,
+          "retrieval_ms": 4.096899996511638,
+          "total_ms": 4.239699977915734
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "exact-05",
+        "query": "What are the code style rules?",
+        "tags": [
+          "exact"
+        ],
+        "split": "train",
+        "expect": [
+          "code-style"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What are the code style rules?",
+          "candidates": [
+            "code-style",
+            "code-freeze"
+          ],
+          "selected": [
+            "code-style",
+            "code-freeze"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 38,
+          "prompt_tokens": 126,
+          "retrieval_ms": 4.334900004323572,
+          "total_ms": 4.507599980570376
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "stem-01",
+        "query": "Which tests need mocking?",
+        "tags": [
+          "stem"
+        ],
+        "split": "train",
+        "expect": [
+          "test-runner"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which tests need mocking?",
+          "candidates": [
+            "test-runner",
+            "lt-orm-rationale"
+          ],
+          "selected": [
+            "test-runner",
+            "lt-orm-rationale"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 46,
+          "prompt_tokens": 133,
+          "retrieval_ms": 4.853899998124689,
+          "total_ms": 5.124800023622811
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "stem-02",
+        "query": "When do we tag a release?",
+        "tags": [
+          "stem"
+        ],
+        "split": "dev",
+        "expect": [
+          "release-cadence"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "When do we tag a release?",
+          "candidates": [
+            "release-cadence"
+          ],
+          "selected": [
+            "release-cadence"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 18,
+          "prompt_tokens": 105,
+          "retrieval_ms": 3.769800008740276,
+          "total_ms": 3.9106999756768346
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "stem-03",
+        "query": "Who commits directly to main?",
+        "tags": [
+          "stem"
+        ],
+        "split": "train",
+        "expect": [
+          "branch-policy"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Who commits directly to main?",
+          "candidates": [
+            "branch-policy"
+          ],
+          "selected": [
+            "branch-policy"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 23,
+          "prompt_tokens": 112,
+          "retrieval_ms": 3.438299987465143,
+          "total_ms": 3.5337000153958797
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "stem-04",
+        "query": "Which environments are running on a VPS?",
+        "tags": [
+          "stem"
+        ],
+        "split": "train",
+        "expect": [
+          "deploy-host"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which environments are running on a VPS?",
+          "candidates": [
+            "deploy-host",
+            "backup-0330",
+            "backup-0200",
+            "test-runner"
+          ],
+          "selected": [
+            "deploy-host",
+            "backup-0330",
+            "backup-0200",
+            "test-runner"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 66,
+          "prompt_tokens": 157,
+          "retrieval_ms": 3.793099953327328,
+          "total_ms": 4.0210000006482005
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "multi-01",
+        "query": "Which Python version does the backend run on?",
+        "tags": [
+          "multi-term"
+        ],
+        "split": "train",
+        "expect": [
+          "language"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which Python version does the backend run on?",
+          "candidates": [
+            "language",
+            "backup-0330",
+            "deploy-host",
+            "backup-0200",
+            "test-runner"
+          ],
+          "selected": [
+            "language",
+            "backup-0330",
+            "deploy-host",
+            "backup-0200",
+            "test-runner"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 81,
+          "prompt_tokens": 173,
+          "retrieval_ms": 4.842399968765676,
+          "total_ms": 5.185999965760857
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "multi-02",
+        "query": "How many tokens are reserved for the reply?",
+        "tags": [
+          "multi-term"
+        ],
+        "split": "train",
+        "expect": [
+          "context-window"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How many tokens are reserved for the reply?",
+          "candidates": [
+            "context-window",
+            "token-estimate"
+          ],
+          "selected": [
+            "context-window",
+            "token-estimate"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 46,
+          "prompt_tokens": 137,
+          "retrieval_ms": 4.276699968613684,
+          "total_ms": 4.442900011781603
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "multi-03",
+        "query": "Does the team sync happen every Monday?",
+        "tags": [
+          "multi-term"
+        ],
+        "split": "dev",
+        "expect": [
+          "meeting-day"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Does the team sync happen every Monday?",
+          "candidates": [
+            "meeting-day",
+            "backup-0330",
+            "backup-0200",
+            "reviewer",
+            "release-cadence",
+            "branch-policy"
+          ],
+          "selected": [
+            "meeting-day",
+            "backup-0330",
+            "backup-0200",
+            "reviewer",
+            "release-cadence"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 82,
+          "prompt_tokens": 172,
+          "retrieval_ms": 4.99010004568845,
+          "total_ms": 5.334999994374812
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "multi-04",
+        "query": "Is Ollama required to run the tests?",
+        "tags": [
+          "multi-term"
+        ],
+        "split": "train",
+        "expect": [
+          "test-runner"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Is Ollama required to run the tests?",
+          "candidates": [
+            "test-runner",
+            "model-default",
+            "backup-0330",
+            "deploy-host",
+            "backup-0200"
+          ],
+          "selected": [
+            "test-runner",
+            "model-default",
+            "backup-0330",
+            "deploy-host",
+            "backup-0200"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 85,
+          "prompt_tokens": 175,
+          "retrieval_ms": 3.345999983139336,
+          "total_ms": 3.5947999567724764
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.2
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-01",
+        "query": "Which datastore holds our records?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "db-engine"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which datastore holds our records?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 97,
+          "retrieval_ms": 3.1061999616213143,
+          "total_ms": 3.204900014679879
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-02",
+        "query": "Which dialect powers the application?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "language"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which dialect powers the application?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 98,
+          "retrieval_ms": 2.9887999990023673,
+          "total_ms": 3.102299990132451
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-03",
+        "query": "How do users drive the tool from a terminal?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "dev",
+        "expect": [
+          "cli-framework"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How do users drive the tool from a terminal?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 99,
+          "retrieval_ms": 2.6162000140175223,
+          "total_ms": 2.713099995162338
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-04",
+        "query": "How do we verify behaviour without a network service?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "test-runner"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How do we verify behaviour without a network service?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 102,
+          "retrieval_ms": 2.7053999947384,
+          "total_ms": 2.8008000226691365
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-05",
+        "query": "Which neural network answers our questions?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "model-default"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which neural network answers our questions?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 99,
+          "retrieval_ms": 2.6931000174954534,
+          "total_ms": 2.7849000180140138
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-06",
+        "query": "How much text fits in a single prompt?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "context-window"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How much text fits in a single prompt?",
+          "candidates": [
+            "db-engine"
+          ],
+          "selected": [
+            "db-engine"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 20,
+          "prompt_tokens": 110,
+          "retrieval_ms": 3.623099997639656,
+          "total_ms": 3.741999971680343
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": 0.0
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": 0.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-07",
+        "query": "How often do we ship new versions?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "dev",
+        "expect": [
+          "release-cadence"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How often do we ship new versions?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 97,
+          "retrieval_ms": 2.9131000046618283,
+          "total_ms": 3.0038999975658953
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-08",
+        "query": "What is the rule for pushing changes to the trunk?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "branch-policy"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What is the rule for pushing changes to the trunk?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 101,
+          "retrieval_ms": 3.045799967367202,
+          "total_ms": 3.1525000231340528
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-09",
+        "query": "Which conditions allow others to reuse the software?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "dev",
+        "expect": [
+          "license"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Which conditions allow others to reuse the software?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 101,
+          "retrieval_ms": 3.1426000059582293,
+          "total_ms": 3.2528999727219343
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "para-10",
+        "query": "Where does the pre-production environment live?",
+        "tags": [
+          "paraphrase"
+        ],
+        "split": "train",
+        "expect": [
+          "deploy-host"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Where does the pre-production environment live?",
+          "candidates": [
+            "docs-location",
+            "branch-policy"
+          ],
+          "selected": [
+            "docs-location",
+            "branch-policy"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 43,
+          "prompt_tokens": 136,
+          "retrieval_ms": 2.8377000126056373,
+          "total_ms": 2.974000002723187
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": 0.0
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": 0.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "follow-01",
+        "query": "Is it fast?",
+        "tags": [
+          "followup"
+        ],
+        "split": "train",
+        "expect": [
+          "db-engine"
+        ],
+        "forbid": [],
+        "expect_kind": "followup",
+        "observation": {
+          "kind": "followup",
+          "wants_history": false,
+          "borrowed": true,
+          "depth": 5,
+          "search_text": "Is it fast? What database does the project use?",
+          "candidates": [
+            "db-engine",
+            "license",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "selected": [
+            "db-engine",
+            "license",
+            "code-style",
+            "lt-auth-choice"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 86,
+          "prompt_tokens": 181,
+          "retrieval_ms": 3.5420999629423022,
+          "total_ms": 3.8862000219523907
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.25
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "follow-02",
+        "query": "Why that size?",
+        "tags": [
+          "followup"
+        ],
+        "split": "dev",
+        "expect": [
+          "context-window"
+        ],
+        "forbid": [],
+        "expect_kind": "followup",
+        "observation": {
+          "kind": "followup",
+          "wants_history": false,
+          "borrowed": true,
+          "depth": 5,
+          "search_text": "Why that size? Tell me about the context window.",
+          "candidates": [
+            "context-window"
+          ],
+          "selected": [
+            "context-window"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 25,
+          "prompt_tokens": 123,
+          "retrieval_ms": 2.8426999924704432,
+          "total_ms": 2.931899973191321
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "follow-03",
+        "query": "Anything else?",
+        "tags": [
+          "followup"
+        ],
+        "split": "train",
+        "expect": [
+          "release-cadence"
+        ],
+        "forbid": [],
+        "expect_kind": "followup",
+        "observation": {
+          "kind": "followup",
+          "wants_history": false,
+          "borrowed": true,
+          "depth": 8,
+          "search_text": "Anything else? Write the release notes",
+          "candidates": [
+            "release-cadence",
+            "docs-location"
+          ],
+          "selected": [
+            "release-cadence",
+            "docs-location"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 38,
+          "prompt_tokens": 137,
+          "retrieval_ms": 2.6091000181622803,
+          "total_ms": 2.7212000568397343
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "follow-04",
+        "query": "And for hotfixes?",
+        "tags": [
+          "followup"
+        ],
+        "split": "dev",
+        "expect": [
+          "branch-policy"
+        ],
+        "forbid": [],
+        "expect_kind": "followup",
+        "observation": {
+          "kind": "followup",
+          "wants_history": false,
+          "borrowed": true,
+          "depth": 5,
+          "search_text": "And for hotfixes? How do we handle branches?",
+          "candidates": [
+            "branch-policy"
+          ],
+          "selected": [
+            "branch-policy"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 23,
+          "prompt_tokens": 124,
+          "retrieval_ms": 2.6522999978624284,
+          "total_ms": 2.733799978159368
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "follow-05",
+        "query": "How was it fixed?",
+        "tags": [
+          "followup",
+          "assistant-followup"
+        ],
+        "split": "train",
+        "expect": [
+          "lt-incident"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "followup",
+          "wants_history": false,
+          "borrowed": true,
+          "depth": 5,
+          "search_text": "How was it fixed? What should I know about reliability?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 114,
+          "retrieval_ms": 2.706300001591444,
+          "total_ms": 2.7885999879799783
+        },
+        "candidates": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "selected": {
+          "recall": 0.0,
+          "hit": false,
+          "reciprocal_rank": 0.0,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "hist-01",
+        "query": "What did we decide last time about JWT?",
+        "tags": [
+          "history"
+        ],
+        "split": "train",
+        "expect": [
+          "lt-auth-choice"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": true,
+          "borrowed": false,
+          "depth": 8,
+          "search_text": "What did we decide last time about JWT?",
+          "candidates": [
+            "lt-auth-choice"
+          ],
+          "selected": [
+            "lt-auth-choice"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 26,
+          "prompt_tokens": 116,
+          "retrieval_ms": 2.9956999933347106,
+          "total_ms": 3.0969000072218478
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "hist-02",
+        "query": "Why did we reject the ORM previously?",
+        "tags": [
+          "history"
+        ],
+        "split": "dev",
+        "expect": [
+          "lt-orm-rationale"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": true,
+          "borrowed": false,
+          "depth": 8,
+          "search_text": "Why did we reject the ORM previously?",
+          "candidates": [
+            "lt-orm-rationale"
+          ],
+          "selected": [
+            "lt-orm-rationale"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 24,
+          "prompt_tokens": 114,
+          "retrieval_ms": 2.780500042717904,
+          "total_ms": 2.8649000450968742
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "hist-03",
+        "query": "What caused the outage back then?",
+        "tags": [
+          "history"
+        ],
+        "split": "train",
+        "expect": [
+          "lt-incident"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": true,
+          "borrowed": false,
+          "depth": 8,
+          "search_text": "What caused the outage back then?",
+          "candidates": [
+            "lt-incident"
+          ],
+          "selected": [
+            "lt-incident"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 23,
+          "prompt_tokens": 112,
+          "retrieval_ms": 2.9912000172771513,
+          "total_ms": 3.0752000166103244
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "hist-04",
+        "query": "Did we ever try a vector index before?",
+        "tags": [
+          "history"
+        ],
+        "split": "train",
+        "expect": [
+          "lt-vector-notes"
+        ],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": true,
+          "borrowed": false,
+          "depth": 8,
+          "search_text": "Did we ever try a vector index before?",
+          "candidates": [
+            "lt-vector-notes",
+            "reviewer"
+          ],
+          "selected": [
+            "lt-vector-notes",
+            "reviewer"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 46,
+          "prompt_tokens": 137,
+          "retrieval_ms": 2.7966999914497137,
+          "total_ms": 2.9202000005170703
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "super-01",
+        "query": "What format is the nightly export?",
+        "tags": [
+          "superseded"
+        ],
+        "split": "dev",
+        "expect": [
+          "export-jsonl"
+        ],
+        "forbid": [
+          "export-csv"
+        ],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What format is the nightly export?",
+          "candidates": [
+            "export-jsonl"
+          ],
+          "selected": [
+            "export-jsonl"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 17,
+          "prompt_tokens": 106,
+          "retrieval_ms": 2.991100016515702,
+          "total_ms": 3.080700000282377
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "super-02",
+        "query": "When is the team sync?",
+        "tags": [
+          "superseded"
+        ],
+        "split": "train",
+        "expect": [
+          "meeting-day"
+        ],
+        "forbid": [
+          "meeting-day-old"
+        ],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "When is the team sync?",
+          "candidates": [
+            "meeting-day"
+          ],
+          "selected": [
+            "meeting-day"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 16,
+          "prompt_tokens": 102,
+          "retrieval_ms": 4.438700038008392,
+          "total_ms": 4.525099997408688
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "expired-01",
+        "query": "When is the investor demo?",
+        "tags": [
+          "expired"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [
+          "demo-friday"
+        ],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "When is the investor demo?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 95,
+          "retrieval_ms": 2.9195999959483743,
+          "total_ms": 3.009699983522296
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "expired-02",
+        "query": "When does the code freeze start?",
+        "tags": [
+          "expired"
+        ],
+        "split": "dev",
+        "expect": [
+          "code-freeze"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "When does the code freeze start?",
+          "candidates": [
+            "code-freeze",
+            "code-style"
+          ],
+          "selected": [
+            "code-freeze",
+            "code-style"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 38,
+          "prompt_tokens": 126,
+          "retrieval_ms": 2.8729999903589487,
+          "total_ms": 3.003000048920512
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "dup-01",
+        "query": "How long are logs kept?",
+        "tags": [
+          "duplicate"
+        ],
+        "split": "train",
+        "expect": [
+          "logs-a"
+        ],
+        "forbid": [
+          "logs-b"
+        ],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "How long are logs kept?",
+          "candidates": [
+            "logs-a",
+            "logs-b"
+          ],
+          "selected": [
+            "logs-a"
+          ],
+          "skipped": [
+            [
+              "logs-b",
+              "duplicate of logs-a"
+            ]
+          ],
+          "conflicts": [],
+          "memory_tokens": 18,
+          "prompt_tokens": 104,
+          "retrieval_ms": 2.9121999978087842,
+          "total_ms": 2.998399955686182
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 1.0
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "conflict-01",
+        "query": "What is the API timeout for requests?",
+        "tags": [
+          "conflict"
+        ],
+        "split": "dev",
+        "expect": [
+          "api-timeout-30",
+          "api-timeout-60"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What is the API timeout for requests?",
+          "candidates": [
+            "api-timeout-30",
+            "api-timeout-60",
+            "reviewer"
+          ],
+          "selected": [
+            "api-timeout-30",
+            "api-timeout-60",
+            "reviewer"
+          ],
+          "skipped": [],
+          "conflicts": [
+            [
+              "api-timeout-30",
+              "api-timeout-60"
+            ]
+          ],
+          "memory_tokens": 52,
+          "prompt_tokens": 175,
+          "retrieval_ms": 3.927399986423552,
+          "total_ms": 4.091600014362484
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.6666666666666666
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.6666666666666666
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "conflict-02",
+        "query": "When do backups run?",
+        "tags": [
+          "conflict"
+        ],
+        "split": "train",
+        "expect": [
+          "backup-0200",
+          "backup-0330"
+        ],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "When do backups run?",
+          "candidates": [
+            "backup-0330",
+            "backup-0200",
+            "deploy-host",
+            "test-runner"
+          ],
+          "selected": [
+            "backup-0330",
+            "backup-0200",
+            "deploy-host",
+            "test-runner"
+          ],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 66,
+          "prompt_tokens": 152,
+          "retrieval_ms": 3.463100001681596,
+          "total_ms": 3.651799983344972
+        },
+        "candidates": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "selected": {
+          "recall": 1.0,
+          "hit": true,
+          "reciprocal_rank": 1.0,
+          "precision": 0.5
+        },
+        "forbidden_selected": [],
+        "false_inclusion": null,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "neg-01",
+        "query": "What is the capital of Australia?",
+        "tags": [
+          "negative"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "question",
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What is the capital of Australia?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 97,
+          "retrieval_ms": 2.895599987823516,
+          "total_ms": 3.0038999975658953
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "neg-02",
+        "query": "Explain how photosynthesis works",
+        "tags": [
+          "negative"
+        ],
+        "split": "dev",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "instruction",
+        "observation": {
+          "kind": "instruction",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Explain how photosynthesis works",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 96,
+          "retrieval_ms": 2.4913999950513244,
+          "total_ms": 2.584100002422929
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "neg-03",
+        "query": "Who won the football match yesterday?",
+        "tags": [
+          "negative"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "Who won the football match yesterday?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 98,
+          "retrieval_ms": 2.494500018656254,
+          "total_ms": 2.598299994133413
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "neg-04",
+        "query": "What is the weather like in Cebu?",
+        "tags": [
+          "negative"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": null,
+        "observation": {
+          "kind": "question",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "What is the weather like in Cebu?",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 97,
+          "retrieval_ms": 2.4054000386968255,
+          "total_ms": 2.4949999642558396
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": null,
+        "history_ok": true
+      },
+      {
+        "id": "chat-01",
+        "query": "hello there",
+        "tags": [
+          "chitchat"
+        ],
+        "split": "dev",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "chitchat",
+        "observation": {
+          "kind": "chitchat",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 0,
+          "search_text": "hello there",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 91,
+          "retrieval_ms": 0.000400003045797348,
+          "total_ms": 0.05139998393133283
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "chat-02",
+        "query": "thanks!",
+        "tags": [
+          "chitchat"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "chitchat",
+        "observation": {
+          "kind": "chitchat",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 0,
+          "search_text": "thanks!",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 90,
+          "retrieval_ms": 0.000400003045797348,
+          "total_ms": 0.034100026823580265
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "chat-03",
+        "query": "thank you so much",
+        "tags": [
+          "chitchat"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "chitchat",
+        "observation": {
+          "kind": "chitchat",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 0,
+          "search_text": "thank you so much",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 93,
+          "retrieval_ms": 0.000300002284348011,
+          "total_ms": 0.03840000135824084
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": true,
+        "history_ok": true
+      },
+      {
+        "id": "chat-04",
+        "query": "okay cool",
+        "tags": [
+          "chitchat"
+        ],
+        "split": "train",
+        "expect": [],
+        "forbid": [],
+        "expect_kind": "chitchat",
+        "observation": {
+          "kind": "statement",
+          "wants_history": false,
+          "borrowed": false,
+          "depth": 5,
+          "search_text": "okay cool",
+          "candidates": [],
+          "selected": [],
+          "skipped": [],
+          "conflicts": [],
+          "memory_tokens": 0,
+          "prompt_tokens": 91,
+          "retrieval_ms": 3.2309999805875123,
+          "total_ms": 3.3029000042006373
+        },
+        "candidates": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "selected": {
+          "recall": null,
+          "hit": null,
+          "reciprocal_rank": null,
+          "precision": null
+        },
+        "forbidden_selected": [],
+        "false_inclusion": false,
+        "kind_ok": false,
+        "history_ok": true
+      }
+    ]
+  }
+}

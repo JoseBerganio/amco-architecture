@@ -32,6 +32,7 @@ import re
 import sqlite3
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from .config import context_settings, followup_settings
 from .storage import (
@@ -198,13 +199,16 @@ def analyze_task(query: str, working: WorkingMemory) -> TaskAnalysis:
 # --- Stage 2: retrieval -----------------------------------------------------
 
 
-def retrieve(analysis: TaskAnalysis) -> list[dict]:
+def retrieve(analysis: TaskAnalysis, db_path: Path | None = None) -> list[dict]:
+    """Search memories for this request. `db_path` is for the eval harness; None means
+    the configured database."""
     if not analysis.needs_retrieval:
         return []
     return search_memories(
         analysis.retrieval_query,
         limit=analysis.limit + EXTRA_CANDIDATES,
         history=analysis.wants_history,
+        db_path=db_path,
     )
 
 
@@ -282,7 +286,7 @@ def _system_content(task: str | None, memory_block: str, notes: list[str] | None
     return "\n\n".join(parts)
 
 
-def prepare(query: str, working: WorkingMemory) -> PreparedContext:
+def prepare(query: str, working: WorkingMemory, db_path: Path | None = None) -> PreparedContext:
     """Run the pipeline up to (not including) the model call."""
     started = time.perf_counter()
     limit, reserved, memory_cap = context_settings()
@@ -291,7 +295,7 @@ def prepare(query: str, working: WorkingMemory) -> PreparedContext:
     analysis = analyze_task(query, working)
 
     t0 = time.perf_counter()
-    candidates = retrieve(analysis)
+    candidates = retrieve(analysis, db_path)
     retrieval_ms = (time.perf_counter() - t0) * 1000
 
     unique, skipped = resolve_duplicates(candidates)

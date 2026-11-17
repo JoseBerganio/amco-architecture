@@ -17,14 +17,15 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-"""Contract: the CLI command tree must not change during the 0.5.0 refactor.
+"""Contract: the CLI command tree changes only on purpose.
 
 The tree is compared structurally (names, order, options, defaults, help text),
 not as rendered help, so terminal width and Rich versions do not matter.
 It reads the command objects by attribute only, so it works whether or not the
 installed Typer depends on a separate `click` package.
 
-Regenerate the snapshot ONLY from v0.2.0 code:  python tests/test_contract_cli.py
+Regenerate ONLY inside the sprint that changes the CLI, and read the diff first:  python tests/test_contract_cli.py
+Last regenerated in Sprint 10b (the "eval" group)
 """
 
 import json
@@ -77,14 +78,14 @@ def snapshot() -> dict:
     return json.loads(json.dumps(_command(root, "amco")))
 
 
-def test_cli_structure_matches_v020_snapshot():
+def test_cli_structure_matches_snapshot():
     expected = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
     assert snapshot() == expected
 
 
 def test_command_names_and_order_are_stable():
     tree = snapshot()
-    assert [c["name"] for c in tree["commands"]] == ["version", "init", "chat", "memory"]
+    assert [c["name"] for c in tree["commands"]] == ["version", "init", "chat", "memory", "eval"]
     memory = next(c for c in tree["commands"] if c["name"] == "memory")
     assert [c["name"] for c in memory["commands"]] == [
         "add", "list", "inspect", "update", "supersede",

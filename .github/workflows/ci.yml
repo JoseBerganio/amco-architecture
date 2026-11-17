@@ -40,3 +40,20 @@ jobs:
           fi
           "$BIN/python" -m pip install .
           "$BIN/amco$EXT" --help
+
+      - name: Evaluation smoke test (packaged dataset, FTS only, no Ollama)
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            BIN="$RUNNER_TEMP/amco-check/Scripts"; EXT=".exe"
+          else
+            BIN="$RUNNER_TEMP/amco-check/bin"; EXT=""
+          fi
+          export AMCO_EVAL_DIR="$RUNNER_TEMP/amco-eval"
+          "$BIN/amco$EXT" eval run --save ci-smoke --note "ci $GITHUB_SHA"
+          "$BIN/amco$EXT" eval list
+          "$BIN/amco$EXT" eval compare ci-smoke ci-smoke --check
+          "$BIN/amco$EXT" eval run --json > "$RUNNER_TEMP/run.json"
+          "$BIN/python" -m json.tool "$RUNNER_TEMP/run.json" > /dev/null
