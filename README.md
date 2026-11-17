@@ -2,7 +2,7 @@
 
 A local-first memory layer for local LLMs. AMCO stores information outside the model, retrieves only what is relevant to the current question, and fits it into the model's context window.
 
-**Status:** early prototype (v0.5.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Version 0.5 reorganized the code into packages and added a model adapter interface, with no change to the commands or the database. Semantic search and automatic memory management are still to come. The `main` branch is moving toward 0.6: schema versioning with automatic pre-upgrade backups is merged, and an evaluation harness is being built. The released version is still 0.5.0.
+**Status:** early prototype (v0.5.0). The CLI, SQLite storage with full-text search and ranking, Working Memory, the Adaptive Memory Engine pipeline, memory hygiene (duplicates, supersession, expiry), lifecycle review, and Ollama integration work. Version 0.5 reorganized the code into packages and added a model adapter interface, with no change to the commands or the database. Semantic search and automatic memory management are still to come. The `main` branch is moving toward 0.6: schema versioning with automatic pre-upgrade backups and an evaluation harness (`amco eval`) are merged. The released version is still 0.5.0.
 
 ## Why AMCO
 
@@ -18,7 +18,7 @@ Local models have a limited context window and forget everything between session
 - **Memory hygiene**: identical memories are blocked, similar ones are flagged, outdated memories can be superseded (hidden but kept and restorable), and memories can expire.
 - **Lifecycle review**: `amco memory review` suggests deleting expired or long-superseded memories, archiving idle ones, and promoting well-used ones. Nothing changes unless you pass `--apply`.
 - **Safe database upgrades** *(on `main`, ships in 0.6)*: the schema is versioned. Before a real upgrade AMCO copies the database to `<name>.bak-v<old version>` next to it and never overwrites an existing backup. A failed upgrade rolls back, and a database made by a newer AMCO is refused with a clear message instead of being damaged.
-- **Evaluation fixtures and metrics** *(on `main`, not yet usable from the CLI)*: a validated benchmark of 30 memories and 47 queries plus retrieval metrics (recall@k, MRR, precision). The `amco eval` commands arrive in a later 0.6 sprint.
+- **Retrieval benchmark** *(on `main`, ships in 0.6)*: `amco eval run` runs a fixed benchmark (30 memories, 47 queries) through the real retrieval pipeline and reports hits, recall, MRR, precision, token use and latency, overall and per tag. Runs can be saved and compared, and `amco eval compare --check` exits with an error if retrieval quality drops by more than one query net. It never opens your memory database and does not need Ollama.
 - **Local model through an adapter**: talks to Ollama by default (Qwen 2.5 3B, 4-bit quantized). The engine depends on a small `ChatModel` interface rather than on Ollama itself, so other runtimes can be added without touching the memory logic.
 - **Memories are treated as data, not instructions**: the system prompt tells the model not to follow instructions found inside retrieved memories.
 - **User control**: memories are saved only when you explicitly add them, and you can inspect, edit, supersede, and delete any of them.
@@ -73,6 +73,18 @@ amco chat
 
 Then ask something in the chat, such as `What does AMCO use for storage?`. After each answer, AMCO shows which memory IDs it retrieved.
 
+
+To measure retrieval quality:
+
+```bash
+amco eval run --verbose
+amco eval run --save mine --note "$(git rev-parse --short HEAD)"
+amco eval compare mine mine --check
+```
+
+Baselines are kept in `benchmarks/`. Clear any `AMCO_*` settings before a run, because they change the numbers.
+
+
 ## CLI reference
 
 | Command | Purpose |
@@ -90,6 +102,9 @@ Then ask something in the chat, such as `What does AMCO use for storage?`. After
 | `amco memory search "words" [--limit N] [--explain]` | Ranked full-text search |
 | `amco memory reindex` | Rebuild the search index |
 | `amco memory delete <id> [--yes]` | Delete a memory |
+| `amco eval run [--fixtures PATH] [--k N] [--tag TAG] [--save NAME] [--out FILE] [--overwrite] [--note TEXT] [--verbose] [--json] [--min-recall X] [--min-mrr X]` | Run the retrieval benchmark and report the results |
+| `amco eval compare <A> <B> [--force] [--check]` | Compare two saved runs (names or file paths) |
+| `amco eval list` | List saved runs |
 
 ### Chat commands
 
@@ -129,6 +144,7 @@ Settings come from environment variables.
 | `AMCO_STALE_DAYS` | `90` | Idle days before `review` suggests archiving a persistent memory |
 | `AMCO_PROMOTE_USES` | `5` | Uses before `review` suggests promoting a long-term memory |
 | `AMCO_SUPERSEDED_RETENTION_DAYS` | `30` | Days a superseded memory is kept before `review` suggests deleting it |
+| `AMCO_EVAL_DIR` | `<database folder>/eval` | Where `amco eval --save` stores runs |
 
 Ranking weights are starting defaults and have not been tuned yet.
 
@@ -159,11 +175,12 @@ src/amco/
 ├── ranking.py     # Scoring formula
 ├── working.py     # Working Memory and token estimation
 ├── cli/           # Typer commands: system, memory group, chat loop
-├── evaluation/    # Benchmark fixtures, validation and retrieval metrics (runner and reports coming)
+├── evaluation/    # Benchmark: fixtures, metrics, runner, saved runs, comparison, reports
 │   └── datasets/  # Packaged default benchmark (default.json)
 ├── models/        # Model adapter interface and the Ollama adapter
 └── storage/       # SQLite: connection, schema versioning, backups, records, hygiene, search
 tests/             # pytest suite, including contract tests and snapshots
+benchmarks/        # Committed retrieval baselines (frozen per version)
 .github/workflows/ci.yml   # CI on Ubuntu and Windows, Python 3.11 and 3.13
 ```
 
@@ -172,13 +189,13 @@ tests/             # pytest suite, including contract tests and snapshots
 | Version | Focus | Status |
 |---------|-------|--------|
 | 0.1 to 0.5 | Foundation, storage, Working Memory, search and ranking, AME, hygiene, modular refactor | Done |
-| 0.6 | Measure and structure: safe migrations (done), evaluation harness (in progress), real Long-Term Memory | In progress |
+| 0.6 | Measure and structure: safe migrations (done), evaluation harness and baseline (done), real Long-Term Memory (next) | In progress |
 | 0.7 | Embeddings and hybrid retrieval, tuned ranking, better follow-ups and classifier | Planned |
 | 0.8 | Capture: proposals inbox, secret screening, capture from chat | Planned |
 | 0.9 | Conflict classification and resolution, near-duplicates and consolidation | Planned |
 | 1.0 | Final evaluation, hardening, release | Planned |
 
-See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log and [DEV_PROGRESS.md](DEV_PROGRESS.md) for Sprints 1 to 9. The detailed plan is in `SPRINT.md`.
+See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log. [DEV_PROGRESS.md](DEV_PROGRESS.md) is the frozen history of Sprints 1 to 9.
 
 ## Known limitations
 
@@ -192,7 +209,7 @@ See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log and [DEV_PROGR
 - Memories are never saved automatically; use `amco memory add` or `/remember`.
 - A 3B model may sometimes ignore or misuse retrieved memories. Use `/why` and the retrieved IDs shown after each answer to tell retrieval problems from model problems.
 - Only the Ollama adapter is implemented so far; the adapter interface is in place for others.
-- Retrieval quality has no published numbers yet. The benchmark exists, but the runner and the committed baseline arrive in Sprint 10b.
+- Baseline retrieval quality is recorded (27 of 38 queries answered under full-text search), but all 10 paraphrase queries miss, because search matches words and not meaning. That is the target for embeddings in 0.7.
 - Backups are only made automatically before a schema upgrade. There are no export or import commands yet.
 
 ## Privacy
