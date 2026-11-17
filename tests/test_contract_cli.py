@@ -47,9 +47,13 @@ def _plain(value):
 
 def _param(param) -> dict:
     param_type = getattr(param, "type", None)
-    type_name = getattr(param_type, "name", None) or (
-        type(param_type).__name__.lower() if param_type is not None else None
-    )
+    if hasattr(param_type, "name"):
+        type_name = param_type.name
+    elif getattr(param, "is_flag", False):
+        type_name = "boolean"
+    else:
+        type_name = None
+
     return {
         "kind": param.param_type_name,
         "name": param.name,
