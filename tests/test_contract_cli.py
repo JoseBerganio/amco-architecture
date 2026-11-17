@@ -46,6 +46,10 @@ def _plain(value):
 
 
 def _param(param) -> dict:
+    param_type = getattr(param, "type", None)
+    type_name = getattr(param_type, "name", None) or (
+        type(param_type).__name__.lower() if param_type is not None else None
+    )
     return {
         "kind": param.param_type_name,
         "name": param.name,
@@ -53,9 +57,9 @@ def _param(param) -> dict:
         "secondary_opts": list(param.secondary_opts),
         "required": bool(param.required),
         "default": _plain(param.default),
-        "type": param.type.name,
-        "min": _plain(getattr(param.type, "min", None)),
-        "max": _plain(getattr(param.type, "max", None)),
+        "type": type_name,
+        "min": _plain(getattr(param_type, "min", None)),
+        "max": _plain(getattr(param_type, "max", None)),
         "is_flag": bool(getattr(param, "is_flag", False)),
         "help": getattr(param, "help", None),
     }
