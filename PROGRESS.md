@@ -3,7 +3,7 @@
 Record of each sprint on the road from v0.5.0 to v1.0.0: what was added, changed, fixed and tested, and what comes next.
 
 Plan: `SPRINT.md` (local). Earlier history (Sprints 1 to 9, releases 0.1 to 0.5): `DEV_PROGRESS.md` (legacy, frozen, never edited again).
-Last updated: 2026-11-17
+Last updated: 2026-11-19
 
 ## How to use this file
 
@@ -18,8 +18,9 @@ Last updated: 2026-11-17
 | Version | Sprint | Focus | Status |
 |---------|--------|-------|--------|
 | 0.6 | 10a | Schema versioning, safe migrations, backup | Done |
-| 0.6 | 10b | Evaluation harness and FTS5 baseline | Done (pending merge and CI on all four combinations) |
-| 0.6 | 11 (11a, 11b) | Real Long-Term Memory | Next |
+| 0.6 | 10b | Evaluation harness and FTS5 baseline | Done |
+| 0.6 | 11a | Real LTM: data model, chat commands, retrieval, CLI, LTM fixtures | In progress |
+| 0.6 | 11b | LTM lifecycle rules and model-drafted summaries | Not started |
 | 0.7 | 12 (12a, 12b, 12c), 13 | Embeddings, hybrid retrieval, tuning | Not started |
 | 0.8 | 14, 15 | Capture inbox and screening | Not started |
 | 0.9 | 16, 17 | Conflicts and maintenance | Not started |
@@ -97,7 +98,7 @@ Existing tests changed only in their expectations about this sprint's work: `tes
 - [x] If the backup cannot be made, the upgrade is not attempted.
 - [x] Every database command and the chat loop report schema errors as one clear line, not a traceback (exit code 1 for commands).
 - [x] The schema fingerprint and the CLI tree snapshot are unchanged, and the storage-operations snapshot was regenerated deliberately with its diff reviewed.
-- [ ] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13. (confirm on the 10b merge commit)
+- [x] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13. (confirm on the 10b merge commit)
 
 
 ### What's Next
@@ -114,7 +115,7 @@ Sprint 10b (see the next section). The decisions recorded at the end of 10a (shi
 - **Version:** 0.6 series
 - **Sprint:** 10b (second half of the original Sprint 10)
 - **Branch:** `sprint-10b`
-- **Status:** Code complete and baseline committed. Awaiting merge and CI confirmation on all four combinations.
+- **Status:** Done. Merged to `main`; CI green on all four combinations.
 - **Depends on:** Sprint 10a
 
 ### Goal
@@ -236,7 +237,7 @@ Label review of the first real run: 12 of 47 queries needed attention, 0 labels 
 - [x] The schema fingerprint is unchanged, and the CLI snapshot was regenerated deliberately with its diff reviewed.
 - [x] Fixtures load, validate and survive a non-editable install.
 - [x] `db_path` works and the storage, CLI and schema contract snapshots are otherwise unchanged.
-- [ ] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13. (confirm on the merge commit, including the new smoke step on Windows)
+- [x] Tests pass without Ollama, and CI is green on Ubuntu and Windows with Python 3.11 and 3.13. (confirm on the merge commit, including the new smoke step on Windows)
 
 ### Decisions made in this sprint
 
@@ -250,5 +251,64 @@ Label review of the first real run: 12 of 47 queries needed attention, 0 labels 
 - CI thresholds (`--min-recall`, `--min-mrr`) are not set yet. Suggested: about 10 points below the baseline.
 
 ### What's Next
+Sprint 11a (see below). First step: branch from `main`, save `amco eval run --save pre-sprint-11`, then migration 2.
 
-Merge `sprint-10b` after CI is green on all four combinations. Then Sprint 11 (real Long-Term Memory), first step: branch from `main`, run `amco eval run --save pre-sprint-11`, then migration 2 (`kind`, `source_session`, `period_start`, `period_end`). Adding `ltm` fixtures will need a newer baseline in the same commit.
+
+---
+
+## Sprint 11a — Long-Term Memory: data model, chat commands, retrieval, CLI
+
+### Version and sprint
+
+- **Version:** 0.6 series (v0.6.0 is released after Sprint 11b)
+- **Sprint:** 11a (first half of Sprint 11; 11b is lifecycle rules and model-drafted summaries)
+- **Branch:** `sprint-11a-ltm-data-model`
+- **Status:** In progress
+- **Depends on:** Sprint 10b (merged)
+
+### Goal
+
+Turn Persistent and Long-Term memory from one type flag into two systems with different jobs. By the end of this sprint a session summary can be saved to LTM from chat with its session and period, a later session asking a history question retrieves it, and `/why`, `list` and `inspect` show what kind of memory it is.
+
+### Delivery plan
+
+| Step | Tasks | Result | Status |
+|------|-------|--------|--------|
+| 1 | S11-01 to S11-05, S11-02a | Migration 2 and the storage API (`kind`, `source`, session, period) | In progress |
+| 2 | S11-06 to S11-08, S11-11 | Working Memory sessions; `/remember` records the session; `/summary`; `/status` | Not started |
+| 3 | S11-12 to S11-14 | `format_memory`, `ContextReport`, history path check | Not started |
+| 4 | S11-17, S11-18 | CLI `--kind`, `Kind` column, `inspect` lines, CLI snapshot | Not started |
+| 5 | S11-19 to S11-21 | LTM fixtures, new baseline, regression gate, contracts, close-out | Not started |
+
+### Added
+
+(Filled in per step.)
+
+### Changed
+
+(Filled in per step.)
+
+### Fixed
+
+(Filled in per step.)
+
+### Tests
+
+(Filled in per step.)
+
+### Acceptance Criteria
+
+- [ ] A summary can be saved to LTM from chat with its source session and period.
+- [ ] A later session asking a history question retrieves that summary, and `/why` shows its kind.
+- [ ] Persistent and LTM items are distinguishable in `list`, `inspect` and `/why`.
+- [ ] Older databases migrate through the Sprint 10 path with a backup.
+- [ ] Eval results for non-LTM queries show no flips against `pre-sprint-11`.
+- [ ] Tests pass without Ollama, and CI is green on all four combinations.
+
+### Decisions made in this sprint
+
+(Filled in per step.)
+
+### What's Next
+
+Sprint 11b.

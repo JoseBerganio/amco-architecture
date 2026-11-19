@@ -195,7 +195,7 @@ benchmarks/        # Committed retrieval baselines (frozen per version)
 | 0.9 | Conflict classification and resolution, near-duplicates and consolidation | Planned |
 | 1.0 | Final evaluation, hardening, release | Planned |
 
-See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log. [DEV_PROGRESS.md](DEV_PROGRESS.md) is the frozen history of Sprints 1 to 9.
+See [PROGRESS.md](PROGRESS.md) for the 0.6 to 1.0 development log. [DEV_PROGRESS.md](/legacy_md_files/DEV_PROGRESS.md) is the frozen history of Sprints 1 to 9.
 
 ## Known limitations
 
