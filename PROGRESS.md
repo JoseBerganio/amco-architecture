@@ -274,27 +274,45 @@ Turn Persistent and Long-Term memory from one type flag into two systems with di
 
 | Step | Tasks | Result | Status |
 |------|-------|--------|--------|
-| 1 | S11-01 to S11-05, S11-02a | Migration 2 and the storage API (`kind`, `source`, session, period) | In progress |
-| 2 | S11-06 to S11-08, S11-11 | Working Memory sessions; `/remember` records the session; `/summary`; `/status` | Not started |
+| 1 | S11-01 to S11-05, S11-02a | Migration 2 and the storage API (`kind`, `source`, session, period) | Done |
+| 2 | S11-06 to S11-08, S11-08a, S11-11, S11-15, S11-16 | Sessions in Working Memory; `/remember` records the session; `/summary` with a size check; `/status`; lifecycle never moves summaries or records by rule | In progress |
 | 3 | S11-12 to S11-14 | `format_memory`, `ContextReport`, history path check | Not started |
-| 4 | S11-17, S11-18 | CLI `--kind`, `Kind` column, `inspect` lines, CLI snapshot | Not started |
+| 4 | S11-17, S11-18 | CLI `--kind`, `Kind` column, `inspect` lines, `--type` default, CLI snapshot | Not started |
 | 5 | S11-19 to S11-21 | LTM fixtures, new baseline, regression gate, contracts, close-out | Not started |
 
 ### Added
 
-(Filled in per step.)
+**Step 1: storage foundation**
+
+- Migration 2 in `storage/schema.py`: `kind` (NOT NULL DEFAULT 'fact'), `source_session`, `period_start`, `period_end`. It adds only the columns that are missing, so it is idempotent. Existing rows become facts.
+- `VALID_KINDS` (`fact`, `summary`, `record`) and `VALID_SOURCES` (`user`, `chat`, `summary`), exported from `amco.storage`.
+- `add_memory(kind, source, source_session, period_start, period_end)`: kind and source are validated; periods accept a date or a timestamp, a date-only end runs to the end of that day, and start after end is rejected.
+- `update_memory(kind=...)`. Changing the kind never changes the tier.
+- `tests/test_ltm_storage.py`.
 
 ### Changed
 
-(Filled in per step.)
+**Step 1**
+
+- `add_memory(memory_type=None)` now resolves the tier from the kind: summaries and records are long-term, facts persistent, and an explicit type wins. The positional order of the existing parameters is unchanged.
+- The INSERT takes the source as a parameter instead of the hardcoded `'user'`.
+- `schema_fingerprint.json` and `storage_operations.json` regenerated on purpose; the diffs were read first. The CLI tree snapshot is unchanged.
+- `test_contract_schema.py` and `test_contract_storage.py`: wording updated to "the current schema".
+- Surface tests extended with `VALID_KINDS` and `VALID_SOURCES`.
 
 ### Fixed
 
-(Filled in per step.)
+**Step 1**
+
+- `test_migrations.py` and `test_backup.py` appended `Migration(2, ...)` and asserted `user_version == 1`. That only held while migration 1 was the last one. They now use `SCHEMA_VERSION` and `SCHEMA_VERSION + 1`, so adding real migrations no longer breaks them.
 
 ### Tests
 
-(Filled in per step.)
+**Step 1**
+
+New: `tests/test_ltm_storage.py` (defaults and the tier rule; kind, source and period validation; session and period storage; `update_memory(kind=...)`; search and list results carry the new fields; a version 1 database upgrades with its data and one backup; an unversioned 0.5 database gets exactly one backup for both migrations; a fresh database has the columns and no backup).
+Changed: `test_migrations.py`, `test_backup.py`, `test_contract_imports.py`, `test_storage_modules.py`, `test_contract_schema.py` (names and docstring), `test_contract_storage.py` (docstring).
+Passing test count at the end of Step 1: `<N>`.
 
 ### Acceptance Criteria
 
@@ -307,8 +325,13 @@ Turn Persistent and Long-Term memory from one type flag into two systems with di
 
 ### Decisions made in this sprint
 
-(Filled in per step.)
+**Step 1**
+
+- `kind` has no SQL CHECK constraint; Python validates it, as it does for `memory_type`.
+- Periods are descriptive metadata. They are validated but not used in ranking.
+- The CLI `--type` default is still "persistent". It becomes none in Step 4 (K8), so until then `memory add` cannot create a long-term summary by default.
+- The Step 1 review raised three weaknesses. How each was resolved is recorded in Step 2 below.
 
 ### What's Next
 
-Sprint 11b.
+Step 2 (see SPRINT.md, tasks S11-06 to S11-08a, S11-11, S11-15, S11-16): sessions in Working Memory, `/remember` and `/summary` record the session, a size check so a summary can never be silently skipped by the token budget, and lifecycle rules that never move summaries or records by idle time or use count. Demo: save a summary from chat, start a new chat, ask a history question, read `/why`.
