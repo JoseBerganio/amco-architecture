@@ -167,16 +167,23 @@ def test_database_from_a_newer_amco_is_refused_and_left_alone(tmp_path: Path):
 # --- Applying and rolling back --------------------------------------------------
 
 
-def test_a_second_migration_is_applied_and_versioned(tmp_path: Path, monkeypatch):
+def _with_next_migration(monkeypatch, description: str, apply) -> tuple[int, int]:
+    """Append one more migration after the real ones. Returns (version before, version after)."""
+    before = schema.SCHEMA_VERSION
+    monkeypatch.setattr(
+        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(before + 1, description, apply)]
+    )
+    return before, before + 1
+
+
+def test_a_further_migration_is_applied_and_versioned(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("original", db_path=db)
-    monkeypatch.setattr(
-        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(2, "add extra", _add_extra_column)]
-    )
+    _, after = _with_next_migration(monkeypatch, "add extra", _add_extra_column)
 
     connect(db).close()
 
-    assert _user_version(db) == 2
+    assert _user_version(db) == after
     assert "extra" in _columns(db)
     assert _raw(db, "SELECT content FROM memories") == [("original",)]
 
@@ -184,14 +191,12 @@ def test_a_second_migration_is_applied_and_versioned(tmp_path: Path, monkeypatch
 def test_a_failing_migration_rolls_back_schema_data_and_version(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("original", db_path=db)
-    monkeypatch.setattr(
-        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(2, "broken", _half_done_then_fail)]
-    )
+    before, after = _with_next_migration(monkeypatch, "broken", _half_done_then_fail)
 
-    with pytest.raises(SchemaError, match="Migration 2"):
+    with pytest.raises(SchemaError, match=f"Migration {after}"):
         connect(db)
 
-    assert _user_version(db) == 1
+    assert _user_version(db) == before
     assert "extra" not in _columns(db)
     assert _raw(db, "SELECT content FROM memories") == [("original",)]
 
@@ -199,12 +204,10 @@ def test_a_failing_migration_rolls_back_schema_data_and_version(tmp_path: Path, 
 def test_a_bug_in_a_migration_rolls_back_and_is_not_disguised(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("original", db_path=db)
-    monkeypatch.setattr(
-        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(2, "buggy", _bug)]
-    )
+    before, _ = _with_next_migration(monkeypatch, "buggy", _bug)
 
     with pytest.raises(ValueError, match="a bug in the migration"):
         connect(db)
 
-    assert _user_version(db) == 1
+    assert _user_version(db) == before
     assert "extra" not in _columns(db)
