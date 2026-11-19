@@ -34,6 +34,8 @@ from .hygiene import (
 )
 from .memories import (
     DEFAULT_CONFIDENCE,
+    VALID_KINDS,
+    VALID_SOURCES,
     VALID_TYPES,
     add_memory,
     delete_memory,
@@ -55,6 +57,8 @@ __all__ = [
     "SIMILARITY_THRESHOLD",
     "STOPWORDS",
     "SchemaError",
+    "VALID_KINDS",
+    "VALID_SOURCES",  
     "VALID_TYPES",
     "add_memory",
     "check_duplicates",

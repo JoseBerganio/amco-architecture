@@ -27,12 +27,23 @@ from typing import Any, Iterable
 from .db import session
 
 VALID_TYPES = ("persistent", "long_term")
+VALID_KINDS = ("fact", "summary", "record")
+VALID_SOURCES = ("user", "chat", "summary")
+DEFAULT_KIND = "fact"
+DEFAULT_SOURCE = "user"
 DEFAULT_CONFIDENCE = 1.0
+
+# Kinds that belong in long-term memory unless the caller says otherwise (K8).
+LONG_TERM_KINDS = frozenset({"summary", "record"})
+
+_STAMP = "%Y-%m-%d %H:%M:%S"
+_DAY = "%Y-%m-%d"
 
 _FIELDS = (
     "id", "content", "category", "source", "memory_type",
     "confidence", "use_count", "created_at", "updated_at",
     "superseded_by", "superseded_at", "expires_at", "last_used_at",
+    "kind", "source_session", "period_start", "period_end",
 )
 _COLUMNS = ", ".join(_FIELDS)
 
@@ -40,11 +51,30 @@ _COLUMNS = ", ".join(_FIELDS)
 # --- Validation and status helpers -----------------------------------------
 
 
+def _check_choice(value: str, allowed: tuple[str, ...], label: str) -> str:
+    value = value.strip().casefold()
+    if value not in allowed:
+        raise ValueError(f"{label} must be one of: {', '.join(allowed)}.")
+    return value
+
+
 def _check_type(memory_type: str) -> str:
-    memory_type = memory_type.strip().casefold()
-    if memory_type not in VALID_TYPES:
-        raise ValueError(f"Memory type must be one of: {', '.join(VALID_TYPES)}.")
-    return memory_type
+    return _check_choice(memory_type, VALID_TYPES, "Memory type")
+
+
+def _check_kind(kind: str) -> str:
+    return _check_choice(kind, VALID_KINDS, "Memory kind")
+
+
+def _check_source(source: str) -> str:
+    return _check_choice(source, VALID_SOURCES, "Memory source")
+
+
+def _resolve_type(memory_type: str | None, kind: str) -> str:
+    """An explicit type always wins; otherwise summaries and records are long-term."""
+    if memory_type is None:
+        return "long_term" if kind in LONG_TERM_KINDS else "persistent"
+    return _check_type(memory_type)
 
 
 def _check_confidence(value: float) -> float:
@@ -62,6 +92,35 @@ def _check_expiry(value: str) -> str:
         return datetime.strptime(value.strip(), "%Y-%m-%d").date().isoformat()
     except ValueError:
         raise ValueError("Expiry must be a date in YYYY-MM-DD format.") from None
+
+
+def _period_bound(value: str, name: str, is_end: bool) -> tuple[str, datetime]:
+    """Return (text to store, moment to compare). A date-only end runs to the end of that day."""
+    text = value.strip()
+    for fmt, has_time in ((_STAMP, True), (_DAY, False)):
+        try:
+            parsed = datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+        comparable = parsed
+        if is_end and not has_time:
+            comparable = parsed.replace(hour=23, minute=59, second=59)
+        return parsed.strftime(fmt), comparable
+    raise ValueError(f"{name} must be YYYY-MM-DD or YYYY-MM-DD HH:MM:SS.")
+
+
+def _check_period(start: str | None, end: str | None) -> tuple[str | None, str | None]:
+    """Validate an optional period. Blank counts as not given."""
+    first = _period_bound(start, "Period start", False) if start and start.strip() else None
+    last = _period_bound(end, "Period end", True) if end and end.strip() else None
+    if first and last and first[1] > last[1]:
+        raise ValueError("Period start cannot be after period end.")
+    return (first[0] if first else None, last[0] if last else None)
+
+
+def _clean_session(value: str | None) -> str | None:
+    value = value.strip() if value else None
+    return value or None
 
 
 def _active_sql(alias: str = "") -> str:
@@ -99,27 +158,44 @@ def _require_supersedable(conn: sqlite3.Connection, old_id: int) -> None:
 def add_memory(
     content: str,
     category: str = "general",
-    memory_type: str = "persistent",
+    memory_type: str | None = None,
     db_path: Path | None = None,
     confidence: float = DEFAULT_CONFIDENCE,
     expires_at: str | None = None,
     supersedes: int | None = None,
+    kind: str = DEFAULT_KIND,
+    source: str = DEFAULT_SOURCE,
+    source_session: str | None = None,
+    period_start: str | None = None,
+    period_end: str | None = None,
 ) -> int:
-    """Save a memory. If `supersedes` is given, the older memory is replaced atomically."""
+    """Save a memory. If `supersedes` is given, the older memory is replaced atomically.
+
+    `memory_type=None` picks the tier from the kind: summaries and records go to
+    long-term memory, facts to persistent memory. An explicit type always wins.
+    """
     content = content.strip()
     if not content:
         raise ValueError("Memory content cannot be empty.")
-    memory_type = _check_type(memory_type)
+    kind = _check_kind(kind)
+    memory_type = _resolve_type(memory_type, kind)
+    source = _check_source(source)
     confidence = _check_confidence(confidence)
     expires = _check_expiry(expires_at) if expires_at else None
+    start, end = _check_period(period_start, period_end)
+    session_id = _clean_session(source_session)
     with session(db_path) as conn:
         if supersedes is not None:
             _require_supersedable(conn, supersedes)
         cur = conn.execute(
             """INSERT INTO memories(content, category, source, memory_type, confidence,
-                                    expires_at, updated_at)
-               VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)""",
-            (content, category.strip() or "general", memory_type, confidence, expires),
+                                    expires_at, updated_at, kind, source_session,
+                                    period_start, period_end)
+               VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)""",
+            (
+                content, category.strip() or "general", source, memory_type, confidence,
+                expires, kind, session_id, start, end,
+            ),
         )
         new_id = int(cur.lastrowid)
         if supersedes is not None:
@@ -169,10 +245,12 @@ def update_memory(
     db_path: Path | None = None,
     confidence: float | None = None,
     expires_at: str | None = None,
+    kind: str | None = None,
 ) -> bool:
     """Update the given fields. Returns False if the memory does not exist.
 
     For `expires_at`, pass a YYYY-MM-DD date to set it or "none" to clear it.
+    Changing the kind never moves the memory between tiers; that is `memory_type`.
     """
     fields: dict[str, Any] = {}
     if content is not None:
@@ -184,6 +262,8 @@ def update_memory(
         fields["category"] = category.strip() or "general"
     if memory_type is not None:
         fields["memory_type"] = _check_type(memory_type)
+    if kind is not None:
+        fields["kind"] = _check_kind(kind)
     if confidence is not None:
         fields["confidence"] = _check_confidence(confidence)
     if expires_at is not None:
@@ -191,7 +271,7 @@ def update_memory(
         fields["expires_at"] = None if text.casefold() in {"", "none", "never"} else _check_expiry(text)
     if not fields:
         raise ValueError(
-            "Nothing to update. Provide content, category, type, confidence, or expiry."
+            "Nothing to update. Provide content, category, type, kind, confidence, or expiry."
         )
 
     assignments = ", ".join(f"{name} = ?" for name in fields)

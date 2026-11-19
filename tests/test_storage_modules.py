@@ -31,7 +31,7 @@ SURFACE = {
     "amco.storage.text": ["STOPWORDS", "extract_terms", "normalize_content", "term_similarity"],
     "amco.storage.db": ["connect", "session", "rebuild_index", "_has_fts"],
     "amco.storage.memories": [
-        "VALID_TYPES", "DEFAULT_CONFIDENCE", "memory_status", "add_memory",
+        "VALID_TYPES", "VALID_KINDS", "VALID_SOURCES", "DEFAULT_CONFIDENCE", "memory_status", "add_memory",
         "list_memories", "get_memory", "update_memory", "delete_memory", "record_usage",
     ],
     "amco.storage.hygiene": [

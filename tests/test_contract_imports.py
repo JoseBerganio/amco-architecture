@@ -25,7 +25,7 @@ import pytest
 
 SURFACE = {
     "amco.storage": [
-        "DEFAULT_DB", "VALID_TYPES", "DEFAULT_CONFIDENCE", "MAX_QUERY_TERMS",
+        "DEFAULT_DB", "VALID_TYPES", "VALID_KINDS", "VALID_SOURCES", "DEFAULT_CONFIDENCE", "MAX_QUERY_TERMS",
         "SIMILARITY_THRESHOLD", "STOPWORDS", "database_path", "connect", "session",
         "memory_status", "add_memory", "list_memories", "get_memory", "update_memory",
         "delete_memory", "supersede_memory", "restore_memory", "normalize_content",
