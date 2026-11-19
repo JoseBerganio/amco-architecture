@@ -17,12 +17,15 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-"""Contract: the database schema must not change during the 0.5.0 refactor.
+"""Contract: the database schema changes only on purpose.
 
 Compares tables, columns, triggers and the FTS table (whitespace-normalized SQL)
-against a snapshot taken from v0.2.0.
+against a snapshot.
 
-Regenerate the snapshot ONLY from v0.2.0 code:  python tests/test_contract_schema.py
+Regenerate ONLY inside the sprint that changes the schema, and read the diff first:
+    python tests/test_contract_schema.py
+Last regenerated in Sprint 11a (migration 2: kind, source_session, period_start, period_end).
+The v0.5.0 snapshot is kept in tests/snapshots/legacy/.
 """
 
 import json
@@ -80,14 +83,14 @@ def _expected() -> dict:
 
 
 @needs_fts5
-def test_fresh_database_matches_v020_schema(tmp_path: Path):
+def test_fresh_database_matches_the_current_schema(tmp_path: Path):
     db = tmp_path / "fresh.sqlite3"
     connect(db).close()
     assert fingerprint(db) == _expected()
 
 
 @needs_fts5
-def test_sprint1_database_migrates_to_the_v020_schema(tmp_path: Path):
+def test_sprint1_database_migrates_to_the_current_schema(tmp_path: Path):
     db = tmp_path / "legacy.sqlite3"
     conn = sqlite3.connect(db)
     conn.execute("""

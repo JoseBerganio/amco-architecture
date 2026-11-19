@@ -25,6 +25,7 @@ and does not change the schema fingerprint.
 
     0  unversioned: every database made by AMCO 0.1 to 0.5
     1  the 0.5 schema (migration 1 upgrades any unversioned database to it)
+    2  the 0.6 memory-systems schema: kind, source_session, period_start, period_end
 
 Rules for adding a migration:
   * Append a new Migration with the next number. Never edit an old one.
@@ -88,8 +89,32 @@ def _migration_1(conn: sqlite3.Connection) -> None:
     conn.execute("UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL")
 
 
+# --- Migration 2: memory kinds, sessions and periods (Sprint 11a) -------------
+
+# Same rule as migration 1: the order is part of the schema fingerprint, and the
+# text of each definition must stay exactly as written.
+_V2_COLUMNS = (
+    ("kind", "TEXT NOT NULL DEFAULT 'fact'"),
+    ("source_session", "TEXT"),
+    ("period_start", "TEXT"),
+    ("period_end", "TEXT"),
+)
+
+
+def _migration_2(conn: sqlite3.Connection) -> None:
+    """Add the long-term-memory columns that are still missing.
+
+    Idempotent on purpose: a database stamped back to version 0 may already have
+    them. Existing rows become kind='fact' through the column default.
+    """
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(memories)")}
+    for name, definition in _V2_COLUMNS:
+        if name not in existing:
+            conn.execute(f"ALTER TABLE memories ADD COLUMN {name} {definition}")
+
 MIGRATIONS: list[Migration] = [
     Migration(1, "Bring any 0.1 to 0.5 database to the 0.5 schema", _migration_1),
+    Migration(2, "Add memory kind, source session and period columns", _migration_2),
 ]
 
 SCHEMA_VERSION = MIGRATIONS[-1].version
