@@ -141,20 +141,26 @@ def test_newer_database_is_refused_without_a_backup(tmp_path: Path):
     assert _backups(tmp_path) == []
 
 
+def _with_next_migration(monkeypatch, description: str, apply) -> tuple[int, int]:
+    before = schema.SCHEMA_VERSION
+    monkeypatch.setattr(
+        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(before + 1, description, apply)]
+    )
+    return before, before + 1
+
+
 def test_each_real_migration_gets_its_own_backup(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("original", db_path=db)
-    monkeypatch.setattr(
-        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(2, "add extra", _add_extra_column)]
-    )
+    before, after = _with_next_migration(monkeypatch, "add extra", _add_extra_column)
 
     connect(db).close()
 
-    backup = tmp_path / "t.sqlite3.bak-v1"
+    backup = tmp_path / f"t.sqlite3.bak-v{before}"
     assert backup.exists()
-    assert _user_version(backup) == 1
+    assert _user_version(backup) == before
     assert "extra" not in _columns(backup)
-    assert _user_version(db) == 2
+    assert _user_version(db) == after
 
 
 # --- Safety of the backup itself ------------------------------------------------
@@ -194,16 +200,15 @@ def test_if_the_backup_fails_the_upgrade_is_not_attempted(tmp_path: Path, monkey
 def test_a_failed_migration_still_leaves_its_backup(tmp_path: Path, monkeypatch):
     db = tmp_path / "t.sqlite3"
     add_memory("original", db_path=db)
-    monkeypatch.setattr(
-        schema, "MIGRATIONS", [*schema.MIGRATIONS, Migration(2, "broken", _half_done_then_fail)]
-    )
+    before, after = _with_next_migration(monkeypatch, "broken", _half_done_then_fail)
 
-    with pytest.raises(SchemaError, match="Migration 2"):
+    with pytest.raises(SchemaError, match=f"Migration {after}"):
         connect(db)
 
-    backup = tmp_path / "t.sqlite3.bak-v1"
+    backup = tmp_path / f"t.sqlite3.bak-v{before}"
     assert _raw(backup, "SELECT content FROM memories") == [("original",)]
-    assert _user_version(db) == 1
+    assert _user_version(db) == before
+
 
 
 def test_the_backup_is_announced(tmp_path: Path, caplog):

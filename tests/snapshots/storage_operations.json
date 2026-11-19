@@ -17,6 +17,14 @@
       "ALTER TABLE memories ADD COLUMN last_used_at TEXT",
       "UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL",
       "PRAGMA user_version = 1",
+      "BEGIN IMMEDIATE",
+      "PRAGMA user_version",
+      "PRAGMA table_info(memories)",
+      "ALTER TABLE memories ADD COLUMN kind TEXT NOT NULL DEFAULT 'fact'",
+      "ALTER TABLE memories ADD COLUMN source_session TEXT",
+      "ALTER TABLE memories ADD COLUMN period_start TEXT",
+      "ALTER TABLE memories ADD COLUMN period_end TEXT",
+      "PRAGMA user_version = 2",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5( content, category, content='memories', content_rowid='id', tokenize='porter unicode61' )",
       "CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN INSERT INTO memories_fts(rowid, content, category) VALUES (new.id, new.content, new.category); END; CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN INSERT INTO memories_fts(memories_fts, rowid, content, category) VALUES ('delete', old.id, old.content, old.category); END; CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE OF content, category ON memories BEGIN INSERT INTO memories_fts(memories_fts, rowid, content, category) VALUES ('delete', old.id, old.content, old.category); INSERT INTO memories_fts(rowid, content, category) VALUES (new.id, new.content, new.category); END;",
@@ -29,7 +37,7 @@
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at) VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)"
+      "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at, kind, source_session, period_start, period_end) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)"
     ]
   },
   "add_memory_supersedes": {
@@ -39,7 +47,7 @@
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT superseded_by FROM memories WHERE id = ?",
-      "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at) VALUES (?, ?, 'user', ?, ?, ?, CURRENT_TIMESTAMP)",
+      "INSERT INTO memories(content, category, source, memory_type, confidence, expires_at, updated_at, kind, source_session, period_start, period_end) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)",
       "UPDATE memories SET superseded_by = ?, superseded_at = CURRENT_TIMESTAMP WHERE id = ?"
     ]
   },
@@ -49,7 +57,7 @@
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
+      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at, kind, source_session, period_start, period_end FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
     ]
   },
   "list_memories_filtered": {
@@ -58,7 +66,7 @@
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE memory_type = ? ORDER BY id DESC"
+      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at, kind, source_session, period_start, period_end FROM memories WHERE memory_type = ? ORDER BY id DESC"
     ]
   },
   "get_memory": {
@@ -67,7 +75,7 @@
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE id = ?"
+      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at, kind, source_session, period_start, period_end FROM memories WHERE id = ?"
     ]
   },
   "update_memory": {
@@ -125,7 +133,7 @@
       "CREATE TABLE IF NOT EXISTS memories ( id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general', source TEXT NOT NULL DEFAULT 'user', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP )",
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
+      "SELECT id, content, category, source, memory_type, confidence, use_count, created_at, updated_at, superseded_by, superseded_at, expires_at, last_used_at, kind, source_session, period_start, period_end FROM memories WHERE superseded_by IS NULL AND (expires_at IS NULL OR expires_at >= date('now')) ORDER BY id DESC"
     ]
   },
   "search_candidates": {
@@ -135,7 +143,7 @@
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
+      "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, m.kind, m.source_session, m.period_start, m.period_end, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
     ]
   },
   "search_memories": {
@@ -145,7 +153,7 @@
       "PRAGMA user_version",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
       "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories_fts'",
-      "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
+      "SELECT m.id, m.content, m.category, m.source, m.memory_type, m.confidence, m.use_count, m.created_at, m.updated_at, m.superseded_by, m.superseded_at, m.expires_at, m.last_used_at, m.kind, m.source_session, m.period_start, m.period_end, -bm25(memories_fts, 1.0, 0.5) AS match_score FROM memories_fts JOIN memories m ON m.id = memories_fts.rowid WHERE memories_fts MATCH ? AND m.superseded_by IS NULL AND (m.expires_at IS NULL OR m.expires_at >= date('now')) ORDER BY match_score DESC LIMIT ?"
     ]
   },
   "record_usage": {

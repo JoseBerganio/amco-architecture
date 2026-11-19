@@ -1,7 +1,7 @@
 # AMCO Sprint Plan: v0.6 to v1.0
 
-Status: in progress (Sprint 10b complete pending merge; Sprint 11 next)
-Last updated: 2026-11-17
+Status: in progress (Sprint 10 complete; Sprint 11a in progress)
+Last updated: 2026-11-19
 Starting point: v0.5.0 (modular release, tagged)
 Target: v1.0.0
 
@@ -240,11 +240,11 @@ The 0.5.0 contract tests pin the CLI tree, the schema and the storage SQL to v0.
 2. `amco eval compare` shows metric deltas and which queries flipped.
 3. A 0.2 to 0.5 database migrates to versioned schema 1 without losing data.
 4. A backup copy is made before a real migration and not when nothing changes.
-5. The FTS5 baseline is committed and recorded in DEV_PROGRESS.
+5. The FTS5 baseline is committed and recorded in PROGRESS.md.
 6. The schema fingerprint is unchanged, and the other changed snapshots were regenerated deliberately.
 7. Tests pass without Ollama, and CI is green on all four combinations.
 
-Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed by Sprint 10b. Criterion 7 is closed only when CI is green on all four combinations on the merge commit.
+Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed by Sprint 10b. Criterion 7 was closed when CI went green on all four combinations on the merge commit.
 
 **Demo:** `amco eval run --save baseline`, then `amco eval run --verbose` and read the paraphrase misses.
 
@@ -254,9 +254,14 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 
 ## Sprint 11: Memory systems (a real LTM)
 
-**Branch:** `sprint-11` (suggested split: 11a data model and retrieval, 11b lifecycle rules and model-drafted summaries)
+**Branches:** `sprint-11a-ltm-data-model` (storage, chat commands, retrieval, CLI, LTM fixtures), then `sprint-11b-ltm-lifecycle-summaries` (lifecycle rules, model-drafted summaries). v0.6.0 is released after 11b.
 
 **Objective:** turn Persistent and Long-Term memory from one type flag into two systems with different jobs and clear rules.
+
+| Part | Tasks |
+|---|---|
+| 11a | Everything except S11-09 and S11-10 (including S11-02a, S11-08a, S11-15, S11-16) |
+| 11b | S11-09, S11-10 (model-drafted summaries and `/summarize`) |
 
 ### Design decisions (settle first)
 
@@ -268,30 +273,39 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 |---|---|---|
 | WM to PM | `/remember` | User |
 | WM to LTM | `/summary` or `/summarize` (kind `summary`) | User |
-| PM to LTM | `review` archives persistent memories idle 90 days | User approves with `--apply` |
-| LTM to PM | `review` promotes long-term `fact` memories used 5 or more times and still active | User approves with `--apply` |
+| PM to LTM | `review` archives persistent **facts** idle 90 days | User approves with `--apply` || LTM to PM | `review` promotes long-term `fact` memories used 5 or more times and still active | User approves with `--apply` |
 | LTM to WM | Retrieval (history cues lift the long-term demotion) | AME |
 
-- **K4 Promotion scope.** Summaries and records are never promoted by `review`, only by explicit `memory update --type persistent`. This keeps session summaries out of the stable-facts tier.
+- **K4 Promotion and archive scope.** Summaries and records are never promoted or archived by `review`. They change tier only through an explicit `memory update --type`. This keeps session summaries out of the stable-facts tier and keeps a summary you promoted from being archived again behind your back.
 - **K5 Session identity.** Each `WorkingMemory` gets a `session_id` and `started_at`. `/clear` starts a new session.
 - **K6 Summary tier.** Summaries and records default to `long_term`.
+- **K7 Meaning of `source`.** `source` says who or what produced the memory: `user` (CLI `memory add`), `chat` (a chat slash command typed by the user), `summary` (drafted by the model, 11b). It is not the same as `kind`. Later sprints extend `VALID_SOURCES`.
+- **K8 Tier default.** `add_memory(memory_type=None)` resolves from the kind: `summary` and `record` become `long_term`, `fact` becomes `persistent`. An explicit type always wins. The `--type` CLI default changes from `persistent` to none (the CLI snapshot changes).
+- **K9 Migration 2 is idempotent**, like migration 1: it adds only the columns that are missing. A database stamped back to version 0 may already have them.
+- **K10 Regression gate method.** Adding `kind` to fixtures and `ltm` queries changes the fixture hash, so `compare` needs `--force` and the ship rule is "not judged". S11-20 is therefore judged by the flip list restricted to non-`ltm` query ids: zero flips allowed.
+- **K11 Only facts move by rule.** `lifecycle.review` applies the archive and promote rules to `kind == 'fact'` only. Expiry and supersession cleanup still apply to every kind.
+- **K12 Summary category.** `/summary` saves with category `session`. The category is indexed by FTS5, so a category such as `summary` would make every query containing that word match every summary.
+- **K13 Summary size limit.** A summary may use at most half of the effective memory budget (`min(AMCO_MEMORY_TOKENS, usable context / 2)`). A larger memory is skipped by `select_within_budget` and would silently never be retrieved, so `/summary` refuses it at write time with a clear message.
+- **K14 Regression gate (refines K10).** The committed `benchmarks/fts-baseline-0.6.json` is the pre-Sprint-11 reference (it lives in the repo, unlike the local `pre-sprint-11` run). Step 5 adds a test that runs the new dataset and asserts zero flips, against that baseline, for every query id present in both and not tagged `ltm`. The same test is the automated form of S11-20.
 
 ### Tasks
 
 **Setup and baseline**
-- [ ] S11-01 Branch from `main`. Run `amco eval run --save pre-sprint-11` as the regression reference.
+- [x] S11-01 Branch from `main`. Run `amco eval run --save pre-sprint-11` as the regression reference.
 
 **Schema and storage**
-- [ ] S11-02 Add migration 2 to `storage/schema.py`: four `ALTER TABLE ... ADD COLUMN` statements. Existing rows become `kind='fact'`. The pre-migration backup from Sprint 10 should trigger automatically (verify).
-- [ ] S11-03 In `storage/memories.py` add `VALID_KINDS`, `_check_kind`, the new names in `_FIELDS` (appended), and keyword arguments on `add_memory`: `kind`, `source`, `source_session`, `period_start`, `period_end`. Validate periods (a date or `YYYY-MM-DD HH:MM:SS`, start not after end). Summaries and records default to `long_term`.
-- [ ] S11-04 Add `VALID_SOURCES` (`user`, `chat`, `summary`) and stop hardcoding `'user'` in the INSERT. Later sprints extend the tuple.
-- [ ] S11-05 `update_memory` accepts `kind`. Re-export `VALID_KINDS` from `amco.storage`.
+- [x] S11-02 Add migration 2 to `storage/schema.py`: add `kind` (NOT NULL DEFAULT 'fact'), `source_session`, `period_start`, `period_end`, each only if missing (K9). Existing rows become `kind='fact'`. The pre-migration backup from Sprint 10 should trigger automatically (verify, including the case of an unversioned 0.5 database: one backup, `bak-v0`).
+- [x] S11-02a Make the migration tests independent of the latest version. `test_migrations.py` and `test_backup.py` append `Migration(2, ...)` and assert `user_version == 1`; both break once a real migration 2 exists. Use `schema.SCHEMA_VERSION` and `SCHEMA_VERSION + 1` instead. Do this in its own commit BEFORE adding migration 2.
+- [x] S11-03 In `storage/memories.py` add `VALID_KINDS`, `_check_kind`, the new names in `_FIELDS` (appended), and keyword arguments on `add_memory`: `kind`, `source`, `source_session`, `period_start`, `period_end`. `memory_type` becomes `None` by default and resolves from the kind (K8). Validate periods (a date or `YYYY-MM-DD HH:MM:SS`, start not after end; a date-only end counts to the end of that day).
+- [x] S11-04 Add `VALID_SOURCES` (`user`, `chat`, `summary`) and stop hardcoding `'user'` in the INSERT. Later sprints extend the tuple.
+- [x] S11-05 `update_memory` accepts `kind`. Re-export `VALID_KINDS` from `amco.storage`.
 
 **Working Memory and chat**
 - [ ] S11-06 `working.py`: add `session_id` (short uuid) and `started_at`, reset both in `clear()`. Extend `tests/test_working.py` without touching existing assertions.
 - [ ] S11-07 `/remember` saves with `source='chat'` and the current `source_session`.
-- [ ] S11-08 Add `/summary <text>` to `cli/chat.py` and `CHAT_HELP`. It saves exactly the text as an LTM `summary` with the session period. No model involved.
-- [ ] S11-09 (11b) Create `src/amco/summaries.py` with `draft_summary(turns, model)`: a fixed prompt that treats the transcript as data, caps the input to the usable context, and returns a trimmed, length-limited summary or raises on empty output.
+- [ ] S11-08 Add `/summary <text>` to `cli/chat.py` and `CHAT_HELP`. It saves the text (whitespace collapsed, size-checked by `check_summary`) as an LTM `summary` with category `session` (K12), source `chat`, the session id and the session period. No model involved. An exact duplicate is refused like `/remember`; near-duplicates are not hinted.
+- [ ] S11-08a Create `src/amco/summaries.py` with `summary_limit(context, reserved, memory_cap)` and `check_summary(text, max_tokens)` (K13). It imports only `working`. `/summary` uses both. 11b extends this module with `draft_summary`.
+- [ ] S11-09 (11b) Add `draft_summary(turns, model)` to `src/amco/summaries.py`: a fixed prompt that treats the transcript as data, caps the input to the usable context, and returns a trimmed, length-limited summary or raises on empty output. The result is saved with `source='summary'` and a confidence below 1 (a 3B model drafted it), and goes through `check_summary`.
 - [ ] S11-10 (11b) Add `/summarize`: draft with the model, show it, ask for approval, then save as in S11-08. Pass the summarizer into `run_chat` the same way `answer_fn` is passed, so tests can inject a fake.
 - [ ] S11-11 `/status` shows the session id.
 
@@ -301,16 +315,16 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 - [ ] S11-14 Check the history path end to end: a history cue lifts the long-term demotion (`usefulness(..., history=True)`), so summaries compete fairly. Do not change ranking in this sprint. Measure first.
 
 **Lifecycle rules (11b)**
-- [ ] S11-15 `lifecycle.review`: restrict the promote rule to `kind == 'fact'` (K4). Write the movement table (K3) as the module docstring.
-- [ ] S11-16 Confirm no rule deletes or archives summaries and records by idle time. Add a test that pins this.
+- [ ] S11-15 `lifecycle.review`: restrict BOTH the archive and the promote rule to `kind == 'fact'` (K11), and write the movement table (K3) as the module docstring. (Moved to 11a.)
+- [ ] S11-16 Tests that pin K11: no idle-time or use-count rule moves a summary or a record in either direction; expiry cleanup still applies to them. (Moved to 11a.)
 
 **CLI**
-- [ ] S11-17 `memory add --kind`, `memory list --kind`, `memory update --kind`, a `Kind` column in `list`, and kind, session and period lines in `inspect`. Add `KIND_HELP` to `cli/common.py`.
+- [ ] S11-17 `memory add --kind`, `memory list --kind`, `memory update --kind`, a `Kind` column in `list`, and kind, session and period lines in `inspect`. Add `KIND_HELP` to `cli/common.py`. The --type default on memory add becomes None (K8); the CLI snapshot diff must show that default change.
 - [ ] S11-18 Regenerate the CLI tree snapshot and read the diff.
 
 **Evaluation**
-- [ ] S11-19 Add LTM fixtures: summaries with periods, history-cue queries, non-history queries that must not prefer summaries, tag `ltm`. Adding \ltm` queries changes the dataset hash, so Sprint 11 must save a newer baseline into `benchmarks/` in the same commit, or `test_eval_baseline.py` fails by design. Add `ltm` to `KNOWN_TAGS` first, and update the `47 queries` assertion in `tests/test_cli_eval.py`.`
-- [ ] S11-20 Re-run eval and compare with `pre-sprint-11`. Queries not tagged `ltm` must show identical results (regression gate). Record the LTM numbers.
+- [ ] S11-19 Add LTM fixtures: summaries with periods, history-cue queries, non-history queries that must not prefer summaries, tag `ltm`. Adding \ltm` queries changes the dataset hash, so Sprint 11 must save a newer baseline into `benchmarks/` in the same commit, or `test_eval_baseline.py` fails by design. Add `ltm` to `KNOWN_TAGS` first, and update the `47 queries` assertion in `tests/test_cli_eval.py`.` Adding a kind field to FixtureMemory changes the hash of the whole dataset, so the new baseline is needed even before the ltm queries are counted.
+- [ ] S11-20 Add the regression test from K14 and run it. Queries not tagged `ltm` must show zero flips against `benchmarks/fts-baseline-0.6.json`. Record the LTM numbers.
 
 **Contracts**
 - [ ] S11-21 Regenerate `schema_fingerprint.json` and `storage_operations.json` (new columns, new INSERT and SELECT lists). Update the public-surface tests.
@@ -430,7 +444,7 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 - [ ] S13-07 Follow-ups: extend `analyze_task` to borrow recent assistant turns as well as user turns, trimmed to a short length, with the current message's terms still first (note the 12-term query cap in `search_candidates`). Add a fixture where the topic appears only in an assistant reply.
 - [ ] S13-08 Classifier: add the optional `expect_kind` labels to fixtures and report accuracy and a confusion table. Fix the misses that matter (multi-word greetings, question-like statements without `?`). Leave non-English input for 1.1 and say so.
 - [ ] S13-09 Apply only the changes that pass R1 and R2. Update defaults in `config.py` and `ame.py` constants, or make the new behaviors settings if the gain is small.
-- [ ] S13-10 Record a before and after table in DEV_PROGRESS (overall, per tag, `dev` only).
+- [ ] S13-10 Record a before and after table in PROGRESS.md (overall, per tag, `dev` only).
 - [ ] S13-11 Tests: one for each classifier change, assistant-turn borrowing, the cutoff (if adopted), and `tune` output format. Existing ranking tests must keep passing. Where a default weight changes, update `test_config.py` deliberately and note it.
 
 ### Acceptance criteria
@@ -713,11 +727,11 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 
 **Final evaluation**
 - [ ] S18-01 Run every suite (`retrieval`, `capture`, `conflicts`, near-duplicate grouping, screening) and save the results as `v1.0-final`.
-- [ ] S18-02 Write the full results table, from the 0.6 baseline to 1.0, into DEV_PROGRESS, plus a short honest "known limits" list.
+- [ ] S18-02 Write the full results table, from the 0.6 baseline to 1.0, into PROGRESS.md, plus a short honest "known limits" list.
 - [ ] S18-03 Scale check: time retrieval, `review` and a conflict scan on synthetic collections (1k, 5k, 10k memories). Record the numbers and document the supported scale.
 
 **Hardening**
-- [ ] S18-04 Prompt-injection tests: a memory whose text says "ignore previous instructions" or imitates prompt sections ("Conflict notes:", a fake task line) must stay inside its own memory line. Make `format_memory` collapse internal newlines, apply the same to stored proposals, and test that no memory can create a new section in the system message.
+- [ ] S18-04 Prompt-injection tests: a memory whose text says "ignore previous instructions" or imitates prompt sections ("Conflict notes:", a fake task line) must stay inside its own memory line. Make `format_memory` collapse internal newlines, apply the same to stored proposals, and test that no memory can create a new section in the system message. Also cap the length of `/remember` and `memory add` content against the memory budget. A memory larger than the budget is skipped by retrieval and never seen again (found in Sprint 11a; `/summary` already has the check).
 - [ ] S18-05 Secrets: confirm screening runs on every write path (`add`, `/remember`, `propose`, `approve`, consolidation) and that no output or saved eval run contains a matched secret.
 - [ ] S18-06 Failure handling review: embedder down, model down, schema newer than code, locked database, corrupt FTS index (`reindex` recovers), full disk during a backup. Each must give a clear message and never lose a reply.
 - [ ] S18-07 Document retention: superseded memories (30-day default), rejected proposal fingerprints (kept, purgeable), saved eval runs, pre-migration backups (never deleted automatically), where files live, and what leaves the machine (nothing, apart from calls to the configured local Ollama server).
@@ -728,7 +742,7 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 
 **Contracts and release**
 - [ ] S18-10 Regenerate and freeze all snapshots as the 1.0 contract (CLI tree, schema, storage SQL, public imports). Rename the contract-test docstrings to 1.0 wording.
-- [ ] S18-11 Update README and DEV_PROGRESS (summary only): features, commands, configuration table, limits, upgrade guide, privacy notes. README changes only when you ask.
+- [ ] S18-11 Update README and PROGRESS.md (summary only): features, commands, configuration table, limits, upgrade guide, privacy notes. README changes only when you ask.
 - [ ] S18-12 Bump to `1.0.0rc1` (`pyproject.toml` and `__version__`), merge, and tag `v1.0.0-rc.1`.
 - [ ] S18-13 Real-use trial of the release candidate: use AMCO for your own work for a set period. Log issues. Fix only real defects and regressions (no features).
 - [ ] S18-14 Bump to `1.0.0`, tag `v1.0.0`, write the GitHub release notes.
@@ -814,3 +828,9 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 | 2026-11-14 | `eval run` gates judge the candidates view; `compare --check` treats "not judged" as not met | A gate that cannot verify must not pass |
 | 2026-11-16 | Label review of the first real run: 12 of 47 queries flagged, 0 labels changed | All 12 are real weaknesses (10 paraphrases, `follow-05`, `chat-04`), owned by Sprints 12 and 13 |
 | 2026-11-17 | `DEV_PROGRESS.md` declared legacy and frozen; `PROGRESS.md` is the only sprint log from 0.6 on | DEV_PROGRESS covers Sprints 1 to 9 and is complete |
+| 2026-11-19 | Sprint 11 split formally into 11a (storage, chat, retrieval, CLI, fixtures) and 11b (lifecycle, model-drafted summaries) | 11b needs the summarizer and lifecycle rules; 11a is demonstrable alone |
+| 2026-11-19 | K7 to K10 added; S11-02a added | Source semantics, tier default, idempotent migration 2, and a regression-gate method that works with a changed fixture hash |
+| 2026-11-19 | DEV_PROGRESS references in S13-10, S18-02, S18-11 and Sprint 10 criterion 5 changed to PROGRESS.md | DEV_PROGRESS is frozen |
+| 2026-11-19 | S11-15 and S11-16 moved from 11b to 11a; K4 widened to "never promoted or archived"; K11 added | Archiving an idle persistent summary would undo an explicit promotion; the guard is 3 lines and testable now |
+| 2026-11-19 | K12 to K14 added; S11-08a added | FTS5 indexes the category; oversize memories are silently skipped; the regression gate must work with a changed fixture hash |
+| 2026-11-19 | Regression reference changed from the local `pre-sprint-11` run to the committed `benchmarks/fts-baseline-0.6.json` | A local run is not reproducible in CI; the committed baseline is |

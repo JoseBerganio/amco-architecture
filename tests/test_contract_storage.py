@@ -25,8 +25,8 @@ recorded.
 
 Regenerate the snapshot only inside the sprint that deliberately changes storage SQL,
 and read the diff first:  python tests/test_contract_storage.py
-Last regenerated in Sprint 10a (schema versioning: connect() reads user_version
-instead of running PRAGMA table_info and an UPDATE on every call).
+Last regenerated in Sprint 11a (migration 2 and the kind, source and period columns in
+the INSERT and SELECT lists); before that in Sprint 10a (schema versioning).
 """
 
 import json
