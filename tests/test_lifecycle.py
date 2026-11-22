@@ -90,3 +90,25 @@ def test_apply_finding_changes_memories(tmp_path: Path):
     assert get_memory(memory_id, db_path=db)["memory_type"] == "persistent"
     assert apply_finding(Finding(memory_id, "delete", "expired"), db_path=db) is True
     assert get_memory(memory_id, db_path=db) is None
+    
+    
+def test_an_idle_persistent_summary_is_never_suggested_for_archiving(tmp_path: Path):
+    db = tmp_path / "t.sqlite3"
+    memory_id = add_memory("old recap", kind="summary", memory_type="persistent", db_path=db)
+    _set(db, memory_id, created_at="2020-01-01 00:00:00", updated_at="2020-01-01 00:00:00")
+    assert review(db_path=db) == []
+
+
+def test_a_well_used_long_term_summary_or_record_is_never_promoted(tmp_path: Path):
+    db = tmp_path / "t.sqlite3"
+    summary = add_memory("a recap", kind="summary", db_path=db)  # defaults to long_term
+    record = add_memory("a log", kind="record", db_path=db)
+    _set(db, summary, use_count=9)
+    _set(db, record, use_count=9)
+    assert review(db_path=db) == []
+
+
+def test_an_expired_summary_is_still_flagged_for_deletion(tmp_path: Path):
+    db = tmp_path / "t.sqlite3"
+    memory_id = add_memory("a recap", kind="summary", expires_at="2000-01-01", db_path=db)
+    assert _summary(review(db_path=db)) == [(memory_id, "delete")]

@@ -17,7 +17,19 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-"""Memory lifecycle review: suggests, and optionally applies, housekeeping changes."""
+"""Memory lifecycle review: suggests, and optionally applies, housekeeping changes.
+
+Movement rules between the memory systems (Sprint 11, K3, K4 and K11):
+
+    WM  -> PM   /remember                                    the user decides
+    WM  -> LTM  /summary or /summarize (kind 'summary')      the user decides
+    PM  -> LTM  review archives an idle persistent FACT      the user approves with --apply
+    LTM -> PM   review promotes a well-used long-term FACT   the user approves with --apply
+    LTM -> WM   retrieval (history cues lift the demotion)   the AME decides
+
+Only facts move by rule. Summaries and records change tier only through an explicit
+`memory update --type`. Expiry and supersession cleanup apply to every kind.
+"""
 
 from __future__ import annotations
 
@@ -95,6 +107,8 @@ def review(db_path: Path | None = None, now: datetime | None = None) -> list[Fin
             continue
         if m["id"] in losers:
             continue
+        if m.get("kind", "fact") != "fact":
+            continue  # K11: summaries and records are never moved by idle time or use count
 
         last = _last_activity(m)
         idle_days = (now - last).days if last else 0
