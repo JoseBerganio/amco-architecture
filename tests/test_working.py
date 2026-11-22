@@ -17,7 +17,11 @@
 # along with this program; if not, see
 # <https://www.gnu.org/licenses/>.
 
-from amco.working import WorkingMemory, estimate_tokens
+import re
+from datetime import datetime
+
+import amco.working as working_module
+from amco.working import WorkingMemory, estimate_tokens, utc_stamp
 
 
 def _filled(turns: int = 3) -> WorkingMemory:
@@ -92,3 +96,39 @@ def test_set_task_and_clear():
     wm.set_task("again")
     wm.clear()
     assert wm.turns == [] and wm.task is None and wm.dropped_turns == 0
+    
+def test_utc_stamp_has_the_format_storage_reads():
+    stamp = utc_stamp()
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", stamp)
+    datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
+
+
+def test_a_new_working_memory_has_a_session_id_and_start_time():
+    wm = WorkingMemory()
+    assert re.fullmatch(r"[0-9a-f]{8}", wm.session_id)
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", wm.started_at)
+
+
+def test_each_working_memory_gets_its_own_session():
+    assert len({WorkingMemory().session_id for _ in range(20)}) == 20
+
+
+def test_clear_starts_a_new_session(monkeypatch):
+    wm = _filled(1)
+    first = wm.session_id
+    monkeypatch.setattr(working_module, "_new_session_id", lambda: "feedc0de")
+    monkeypatch.setattr(working_module, "utc_stamp", lambda: "2030-01-01 00:00:00")
+    wm.clear()
+    assert wm.session_id == "feedc0de" and wm.session_id != first
+    assert wm.started_at == "2030-01-01 00:00:00"
+
+
+def test_the_start_time_is_a_valid_memory_period(tmp_path):
+    from amco.storage import add_memory
+
+    wm = WorkingMemory()
+    memory_id = add_memory(
+        "recap", kind="summary", period_start=wm.started_at, period_end=utc_stamp(),
+        db_path=tmp_path / "t.sqlite3",
+    )
+    assert memory_id == 1

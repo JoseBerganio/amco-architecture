@@ -19,12 +19,25 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
+STAMP_FORMAT = "%Y-%m-%d %H:%M:%S"  # UTC; the format storage and ranking read
 
 
 def estimate_tokens(text: str) -> int:
     """Rough token estimate (about 4 characters per token)."""
     return (len(text) + 3) // 4 if text else 0
+
+
+def utc_stamp() -> str:
+    """The current UTC time as 'YYYY-MM-DD HH:MM:SS', the form memories store."""
+    return datetime.now(timezone.utc).strftime(STAMP_FORMAT)
+
+
+def _new_session_id() -> str:
+    return uuid.uuid4().hex[:8]
 
 
 @dataclass
@@ -42,6 +55,8 @@ class WorkingMemory:
     dropped_turns: int = 0
     last_prompt_tokens: int = 0
     last_report: object | None = None #AME diagnostics, shown by /why
+    session_id: str = field(default_factory=_new_session_id)
+    started_at: str = field(default_factory=utc_stamp)
 
     @property
     def tokens(self) -> int:
@@ -77,8 +92,11 @@ class WorkingMemory:
         return removed
 
     def clear(self) -> None:
+        """Reset history, task and diagnostics, and start a new session (K5)."""
         self.turns.clear()
         self.task = None
         self.dropped_turns = 0
         self.last_prompt_tokens = 0
         self.last_report = None
+        self.session_id = _new_session_id()
+        self.started_at = utc_stamp()
