@@ -24,19 +24,78 @@ from typing import Callable
 
 from ..config import context_settings, model_name
 from ..storage import SchemaError, add_memory, check_duplicates
-from ..working import WorkingMemory
+from ..summaries import check_summary, summary_limit
+from ..working import WorkingMemory, utc_stamp
 from .common import console
+
+# FTS5 indexes the category, so it must not be a word people put in questions (K12).
+SUMMARY_CATEGORY = "session"
 
 CHAT_HELP = """Chat commands:
   /task <text>      Set the current task (kept in Working Memory)
   /task             Show the current task
   /task clear       Clear the current task
   /remember <text>  Save text to Persistent Memory
+  /summary <text>   Save a session summary to Long-Term Memory
   /why              Explain how the last answer's memories were chosen
-  /status           Show Working Memory and context usage
-  /clear            Reset Working Memory (history and task)
+  /status           Show Working Memory, session and context usage
+  /clear            Reset Working Memory (history, task and session)
   /help             Show this help
   /exit             Quit"""
+
+
+def _remember(arg: str, working: WorkingMemory) -> None:
+    if not arg:
+        console.print("Usage: /remember <text>", markup=False)
+        return
+    exact, similar = check_duplicates(arg)
+    if exact:
+        console.print(f"Already remembered as [bold]#{exact['id']}[/bold].")
+        return
+    memory_id = add_memory(
+        arg,
+        category="chat",
+        memory_type="persistent",
+        source="chat",
+        source_session=working.session_id,
+    )
+    console.print(f"Saved memory [bold]#{memory_id}[/bold] to Persistent Memory.")
+    if similar:
+        ids = ", ".join(f"#{m['id']}" for m in similar)
+        console.print(
+            f"Similar memories exist: {ids}. If this replaces one, run: "
+            f"amco memory supersede <old-id> {memory_id}",
+            markup=False,
+        )
+
+
+def _summary(arg: str, working: WorkingMemory) -> None:
+    """Save the user's own words as a Long-Term Memory summary of this session."""
+    if not arg:
+        console.print("Usage: /summary <text>", markup=False)
+        return
+    try:
+        text = check_summary(arg, summary_limit(*context_settings()))
+    except ValueError as exc:
+        console.print(str(exc), markup=False, highlight=False)
+        return
+    exact, _ = check_duplicates(text)  # near-duplicates are normal for summaries: no hint
+    if exact:
+        console.print(f"Already remembered as [bold]#{exact['id']}[/bold].")
+        return
+    memory_id = add_memory(
+        text,
+        category=SUMMARY_CATEGORY,
+        kind="summary",
+        source="chat",
+        source_session=working.session_id,
+        period_start=working.started_at,
+        period_end=utc_stamp(),
+    )
+    console.print(
+        f"Saved summary [bold]#{memory_id}[/bold] to Long-Term Memory "
+        f"(session {working.session_id})."
+    )
 
 
 def _handle_chat_command(line: str, working: WorkingMemory) -> None:
@@ -59,22 +118,9 @@ def _handle_chat_command(line: str, working: WorkingMemory) -> None:
             working.set_task(arg)
             console.print("Task set.")
     elif command == "/remember":
-        if not arg:
-            console.print("Usage: /remember <text>", markup=False)
-        else:
-            exact, similar = check_duplicates(arg)
-            if exact:
-                console.print(f"Already remembered as [bold]#{exact['id']}[/bold].")
-            else:
-                memory_id = add_memory(arg, category="chat", memory_type="persistent")
-                console.print(f"Saved memory [bold]#{memory_id}[/bold] to Persistent Memory.")
-                if similar:
-                    ids = ", ".join(f"#{m['id']}" for m in similar)
-                    console.print(
-                        f"Similar memories exist: {ids}. If this replaces one, run: "
-                        f"amco memory supersede <old-id> {memory_id}",
-                        markup=False,
-                    )
+        _remember(arg, working)
+    elif command == "/summary":
+        _summary(arg, working)
     elif command == "/why":
         report = working.last_report
         if report is None:
@@ -84,9 +130,10 @@ def _handle_chat_command(line: str, working: WorkingMemory) -> None:
                 console.print(text, markup=False, highlight=False)
     elif command == "/clear":
         working.clear()
-        console.print("Working Memory cleared.")
+        console.print(f"Working Memory cleared. New session: {working.session_id}.")
     elif command == "/status":
         limit, reserved, _ = context_settings()
+        console.print(f"Session: {working.session_id} (started {working.started_at} UTC)")
         console.print(
             f"Working Memory: {len(working.turns)} turns (~{working.tokens} tokens)"
         )
