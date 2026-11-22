@@ -33,6 +33,7 @@ RANKS = {
     "ranking": 1,
     "working": 1,
     "models": 1,
+    "summaries": 2,
     "storage.text": 2,
     "storage.schema": 2,
     "storage.backup": 2,
