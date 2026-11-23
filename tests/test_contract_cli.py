@@ -25,7 +25,8 @@ It reads the command objects by attribute only, so it works whether or not the
 installed Typer depends on a separate `click` package.
 
 Regenerate ONLY inside the sprint that changes the CLI, and read the diff first:  python tests/test_contract_cli.py
-Last regenerated in Sprint 10b (the "eval" group)
+Last regenerated in Sprint 11a (the memory --kind options and the memory add --type default);
+before that in Sprint 10b (the "eval" group)
 """
 
 import json

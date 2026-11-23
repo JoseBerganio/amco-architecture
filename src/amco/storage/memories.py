@@ -211,6 +211,7 @@ def list_memories(
     db_path: Path | None = None,
     memory_type: str | None = None,
     include_inactive: bool = False,
+    kind: str | None = None,
 ) -> list[dict[str, Any]]:
     """List memories, newest first. Superseded and expired ones are hidden unless asked for."""
     query = f"SELECT {_COLUMNS} FROM memories"
@@ -219,6 +220,9 @@ def list_memories(
     if memory_type is not None:
         clauses.append("memory_type = ?")
         params.append(_check_type(memory_type))
+    if kind is not None:
+        clauses.append("kind = ?")
+        params.append(_check_kind(kind))
     if not include_inactive:
         clauses.append(_active_sql())
     if clauses:

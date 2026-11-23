@@ -25,7 +25,10 @@ import typer
 from rich.markup import escape
 from rich.table import Table
 
+from ..config import context_settings
+
 from ..lifecycle import apply_finding, review
+from ..summaries import check_summary, summary_limit
 from ..storage import (
     add_memory,
     check_duplicates,
@@ -39,13 +42,16 @@ from ..storage import (
     update_memory,
 )
 from .common import (
+    ADD_TYPE_HELP,
     CONFIDENCE_HELP,
+    KIND_HELP,
     TYPE_HELP,
     _status_label,
     console,
     err_console,
     handle_schema_errors,
-  )
+    period_text,
+)
 
 memory_app = typer.Typer(help="Manage stored memories.", no_args_is_help=True)
 
@@ -55,7 +61,8 @@ memory_app = typer.Typer(help="Manage stored memories.", no_args_is_help=True)
 def memory_add(
     content: str = typer.Argument(..., help="Text to save as a memory."),
     category: str = typer.Option("general", "--category", "-c", help="Memory category."),
-    memory_type: str = typer.Option("persistent", "--type", "-t", help=TYPE_HELP),
+    memory_type: Optional[str] = typer.Option(None, "--type", "-t", help=ADD_TYPE_HELP),
+    kind: str = typer.Option("fact", "--kind", "-k", help=KIND_HELP),
     confidence: float = typer.Option(1.0, "--confidence", min=0.0, max=1.0, help=CONFIDENCE_HELP),
     expires: Optional[str] = typer.Option(
         None, "--expires", help="Last day this memory is valid (YYYY-MM-DD)."
@@ -67,6 +74,9 @@ def memory_add(
 ) -> None:
     """Add an explicitly approved memory."""
     try:
+        if kind.strip().casefold() == "summary":
+            # Same rule as /summary: a summary the token budget would skip is never retrieved.
+            content = check_summary(content, summary_limit(*context_settings()))
         exact, similar = check_duplicates(content)
         if exact and not force:
             err_console.print(
@@ -80,6 +90,7 @@ def memory_add(
             confidence=confidence,
             expires_at=expires,
             supersedes=supersedes,
+            kind=kind,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -104,19 +115,20 @@ def memory_add(
 @handle_schema_errors
 def memory_list(
     memory_type: Optional[str] = typer.Option(None, "--type", "-t", help=TYPE_HELP),
+    kind: Optional[str] = typer.Option(None, "--kind", "-k", help=KIND_HELP),
     show_all: bool = typer.Option(
         False, "--all", help="Include superseded and expired memories."
     ),
 ) -> None:
     """List stored memories."""
     try:
-        records = list_memories(memory_type=memory_type, include_inactive=show_all)
+        records = list_memories(memory_type=memory_type, kind=kind, include_inactive=show_all)
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
     if not records:
         console.print("No memories stored yet.")
         return
-    columns = ["ID", "Type", "Category", "Conf", "Updated", "Content"]
+    columns = ["ID", "Type", "Kind", "Category", "Conf", "Updated", "Content"]
     if show_all:
         columns.insert(1, "Status")
     table = Table(*columns)
@@ -124,6 +136,7 @@ def memory_list(
         row = [
             str(item["id"]),
             item["memory_type"],
+            item["kind"],
             escape(item["category"]),
             f"{item['confidence']:.2f}",
             item["updated_at"] or item["created_at"],
@@ -148,8 +161,11 @@ def memory_inspect(
     console.print(f"[bold]Memory #{item['id']}[/bold]")
     console.print(f"  Status:     {_status_label(item)}")
     console.print(f"  Type:       {item['memory_type']}")
+    console.print(f"  Kind:       {item['kind']}")
     console.print(f"  Category:   {item['category']}")
     console.print(f"  Source:     {item['source']}")
+    console.print(f"  Session:    {item['source_session'] or '(none)'}", markup=False)
+    console.print(f"  Period:     {period_text(item)}", markup=False)
     console.print(f"  Confidence: {item['confidence']:.2f}")
     console.print(f"  Used:       {item['use_count']} times in prompts")
     console.print(f"  Last used:  {item['last_used_at'] or '(never)'}")
@@ -167,6 +183,7 @@ def memory_update(
     content: Optional[str] = typer.Option(None, "--content", help="New content."),
     category: Optional[str] = typer.Option(None, "--category", "-c", help="New category."),
     memory_type: Optional[str] = typer.Option(None, "--type", "-t", help=TYPE_HELP),
+    kind: Optional[str] = typer.Option(None, "--kind", "-k", help=KIND_HELP),
     confidence: Optional[float] = typer.Option(
         None, "--confidence", min=0.0, max=1.0, help=CONFIDENCE_HELP
     ),
@@ -174,10 +191,16 @@ def memory_update(
         None, "--expires", help="New expiry date (YYYY-MM-DD), or 'none' to clear it."
     ),
 ) -> None:
-    """Update a memory's content, category, type, confidence, or expiry."""
+    """Update a memory's content, category, type, kind, confidence, or expiry."""
     try:
         updated = update_memory(
-            memory_id, content, category, memory_type, confidence=confidence, expires_at=expires
+            memory_id,
+            content,
+            category,
+            memory_type,
+            confidence=confidence,
+            expires_at=expires,
+            kind=kind,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc

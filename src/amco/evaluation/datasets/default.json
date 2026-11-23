@@ -1,6 +1,6 @@
 {
   "name": "default",
-  "description": "AMCO 0.6 default benchmark: 30 memories, 47 queries. Frozen at the end of Sprint 10b.",
+  "description": "AMCO 0.6 default benchmark: 37 memories, 55 queries. Frozen at the end of Sprint 11a.",
   "memories": [
     {"key": "db-engine", "content": "The project database is SQLite with FTS5 full-text search.", "category": "tech", "age_days": 20, "use_count": 6},
     {"key": "language", "content": "The backend is written in Python 3.11.", "category": "tech", "age_days": 45},
@@ -31,7 +31,14 @@
     {"key": "logs-a", "content": "Logs are rotated weekly and kept for thirty days.", "category": "infra", "age_days": 30},
     {"key": "logs-b", "content": "Logs are rotated weekly and kept for thirty days.", "category": "infra", "age_days": 30, "confidence": 0.6},
     {"key": "reviewer", "content": "The lead reviews every pull request before it is merged.", "category": "process", "age_days": 40},
-    {"key": "docs-location", "content": "Design notes live in the docs folder of the repository.", "category": "process", "age_days": 50}
+    {"key": "docs-location", "content": "Design notes live in the docs folder of the repository.", "category": "process", "age_days": 50},
+    {"key": "inv-policy", "content": "Invoices are issued on the first of each month.", "category": "finance", "age_days": 35},
+    {"key": "onb-checklist", "content": "The onboarding checklist has five steps.", "category": "product", "age_days": 28},
+    {"key": "sum-invoices", "content": "Recap: we mapped the invoice reminder workflow and agreed that overdue invoices trigger an email reminder after seven days.", "category": "session", "memory_type": "long_term", "kind": "summary", "age_days": 14, "period_age_days": 14},
+    {"key": "sum-onboarding", "content": "Recap: we walked through the customer onboarding checklist and agreed to replace the welcome call with a short video.", "category": "session", "memory_type": "long_term", "kind": "summary", "age_days": 30, "period_age_days": 30},
+    {"key": "sum-pricing", "content": "Recap: we compared three pricing tiers and settled on a flat monthly plan for freelancers.", "category": "session", "memory_type": "long_term", "kind": "summary", "age_days": 60, "period_age_days": 60},
+    {"key": "rec-migration", "content": "Outcome: the hosting provider migration finished with zero downtime and the old contract was cancelled.", "category": "ops", "memory_type": "long_term", "kind": "record", "age_days": 90, "period_age_days": 90},
+    {"key": "rec-audit", "content": "Outcome: the accessibility audit found low colour contrast on the landing page and a missing label on the signup form.", "category": "ops", "memory_type": "long_term", "kind": "record", "age_days": 120, "period_age_days": 120}
   ],
   "queries": [
     {"id": "exact-01", "query": "What database does the project use?", "expect": ["db-engine"], "tags": ["exact"], "expect_kind": "question", "split": "train"},
@@ -96,6 +103,14 @@
     {"id": "chat-01", "query": "hello there", "tags": ["chitchat"], "expect_kind": "chitchat", "split": "dev"},
     {"id": "chat-02", "query": "thanks!", "tags": ["chitchat"], "expect_kind": "chitchat", "split": "train"},
     {"id": "chat-03", "query": "thank you so much", "tags": ["chitchat"], "expect_kind": "chitchat", "split": "train"},
-    {"id": "chat-04", "query": "okay cool", "tags": ["chitchat"], "expect_kind": "chitchat", "split": "train"}
+    {"id": "chat-04", "query": "okay cool", "tags": ["chitchat"], "expect_kind": "chitchat", "split": "train"},
+    {"id": "ltm-01", "query": "What did we agree last time about overdue invoices?", "expect": ["sum-invoices"], "tags": ["ltm"], "history": true, "expect_kind": "question", "split": "train"},
+    {"id": "ltm-02", "query": "What did we agree earlier about the onboarding video?", "expect": ["sum-onboarding"], "tags": ["ltm"], "history": true, "expect_kind": "question", "split": "train"},
+    {"id": "ltm-03", "query": "Why did we pick a flat monthly plan previously?", "expect": ["sum-pricing"], "tags": ["ltm"], "history": true, "expect_kind": "question", "split": "dev"},
+    {"id": "ltm-04", "query": "What happened with the hosting provider migration before?", "expect": ["rec-migration"], "tags": ["ltm"], "history": true, "expect_kind": "question", "split": "train"},
+    {"id": "ltm-05", "query": "What did the accessibility audit find back then?", "expect": ["rec-audit"], "tags": ["ltm"], "history": true, "expect_kind": "question", "split": "train"},
+    {"id": "ltm-06", "query": "When are invoices issued?", "expect": ["inv-policy"], "tags": ["ltm"], "expect_kind": "question", "split": "train"},
+    {"id": "ltm-07", "query": "How many steps are in the onboarding checklist?", "expect": ["onb-checklist"], "tags": ["ltm"], "expect_kind": "question", "split": "dev"},
+    {"id": "ltm-08", "query": "What did we discuss last time about quantum computing?", "tags": ["negative", "ltm"], "history": true, "expect_kind": "question", "split": "dev"}
   ]
 }

@@ -48,7 +48,8 @@ def build_database(
     the full-text index behave exactly as in real use. Then ONE documented UPDATE
     backdates created_at and updated_at from age_days and sets use_count, which
     add_memory() has no argument for. superseded_at keeps the real clock: no
-    retrieval path reads it.
+    retrieval path reads it. Kind and period come from the fixture; a period is one day, 
+    N days before the run date.
 
     Expiry dates are computed in UTC because SQLite's date('now') is UTC.
     The target must be absent or empty; evaluation never mixes into real data.
@@ -64,6 +65,9 @@ def build_database(
         expires = None
         if memory.expires_in_days is not None:
             expires = (today + timedelta(days=memory.expires_in_days)).isoformat()
+        period = None
+        if memory.period_age_days is not None:
+            period = (today - timedelta(days=memory.period_age_days)).isoformat()
         ids[memory.key] = add_memory(
             memory.content,
             category=memory.category,
@@ -72,6 +76,9 @@ def build_database(
             confidence=memory.confidence,
             expires_at=expires,
             supersedes=ids[memory.supersedes] if memory.supersedes else None,
+            kind=memory.kind,
+            period_start=period,
+            period_end=period,
         )
 
     rows = []
