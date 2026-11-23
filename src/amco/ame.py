@@ -31,7 +31,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import context_settings, followup_settings
@@ -108,6 +108,7 @@ class ContextReport:
     turns_dropped: int
     retrieval_ms: float
     total_ms: float
+    selected_kinds: list[tuple[int, str]] = field(default_factory=list)
 
     def lines(self) -> list[str]:
         a = self.analysis
@@ -123,6 +124,9 @@ class ContextReport:
             + (", ".join(f"#{i} ({s:.2f})" for i, s in self.candidates) or "none")
         )
         out.append("Selected: " + (", ".join(f"#{i}" for i in self.selected) or "none"))
+        non_facts = [(i, kind) for i, kind in self.selected_kinds if kind != "fact"]
+        if non_facts:
+            out.append("Kinds: " + ", ".join(f"#{i} {kind}" for i, kind in non_facts))
         if self.skipped:
             out.append(
                 "Skipped: " + ", ".join(f"#{s['id']} ({s['reason']})" for s in self.skipped)
@@ -355,6 +359,7 @@ def prepare(query: str, working: WorkingMemory, db_path: Path | None = None) -> 
         turns_dropped=turns_dropped,
         retrieval_ms=retrieval_ms,
         total_ms=(time.perf_counter() - started) * 1000,
+        selected_kinds=[(m["id"], m.get("kind") or "fact") for m in selected],
     )
     working.last_report = report
     return PreparedContext(messages=messages, memories=selected, report=report)

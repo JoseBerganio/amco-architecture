@@ -76,3 +76,40 @@ def test_a_multi_day_summary_shows_both_days():
         "period_start": "2026-11-16", "period_end": "2026-11-20",
     }
     assert ame.format_memory(memory) == "- [Memory 4 | summary 2026-11-16..2026-11-20 | session] Week recap"
+    
+    
+# --- The report and /why ---------------------------------------------------------------
+
+
+def test_the_report_lists_non_fact_kinds(tmp_path: Path, monkeypatch):
+    db = _use_db(tmp_path, monkeypatch)
+    fact = add_memory("Storage is SQLite", db_path=db)
+    summary = add_memory(
+        "Recap of storage work", kind="summary", category="session", db_path=db, **PERIOD
+    )
+
+    prepared = ame.prepare(HISTORY_QUESTION, WorkingMemory())
+
+    assert dict(prepared.report.selected_kinds) == {fact: "fact", summary: "summary"}
+    text = "\n".join(prepared.report.lines())
+    assert f"Kinds: #{summary} summary" in text
+    assert f"#{fact} fact" not in text
+
+
+def test_a_fact_only_context_prints_no_kinds_line(tmp_path: Path, monkeypatch):
+    db = _use_db(tmp_path, monkeypatch)
+    fact = add_memory("Storage is SQLite", db_path=db)
+
+    prepared = ame.prepare(HISTORY_QUESTION, WorkingMemory())
+
+    assert prepared.report.selected_kinds == [(fact, "fact")]
+    assert "Kinds" not in "\n".join(prepared.report.lines())
+
+
+def test_the_prompt_carries_the_summary_label(tmp_path: Path, monkeypatch):
+    db = _use_db(tmp_path, monkeypatch)
+    add_memory("Recap of storage work", kind="summary", category="session", db_path=db, **PERIOD)
+
+    prepared = ame.prepare(HISTORY_QUESTION, WorkingMemory())
+
+    assert "summary 2026-11-19" in prepared.messages[0]["content"]
