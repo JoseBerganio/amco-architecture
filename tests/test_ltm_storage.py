@@ -241,3 +241,16 @@ def test_a_fresh_database_has_the_new_columns_and_no_backup(tmp_path: Path):
     add_memory("x", db_path=db)
     assert NEW_COLUMNS <= _columns(db)
     assert list(tmp_path.glob("*.bak-*")) == []
+    
+    
+def test_list_filters_by_kind_and_combines_with_type(tmp_path: Path):
+    db = tmp_path / "t.sqlite3"
+    add_memory("a fact", db_path=db)
+    summary = add_memory("a recap", kind="summary", db_path=db)
+    record = add_memory("a log", kind="record", memory_type="persistent", db_path=db)
+
+    assert [m["id"] for m in list_memories(db_path=db, kind="summary")] == [summary]
+    assert [m["id"] for m in list_memories(db_path=db, kind="record", memory_type="persistent")] == [record]
+    assert list_memories(db_path=db, kind="record", memory_type="long_term") == []
+    with pytest.raises(ValueError, match="Memory kind"):
+        list_memories(db_path=db, kind="diary")
