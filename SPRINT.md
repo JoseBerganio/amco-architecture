@@ -1,7 +1,7 @@
 # AMCO Sprint Plan: v0.6 to v1.0
 
-Status: in progress (Sprint 10 complete; Sprint 11a in progress)
-Last updated: 2026-11-19
+Status: in progress (Sprint 10 complete; Sprint 11a Steps 1 and 2 complete)
+Last updated: 2026-11-22
 Starting point: v0.5.0 (modular release, tagged)
 Target: v1.0.0
 
@@ -301,13 +301,13 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 - [x] S11-05 `update_memory` accepts `kind`. Re-export `VALID_KINDS` from `amco.storage`.
 
 **Working Memory and chat**
-- [ ] S11-06 `working.py`: add `session_id` (short uuid) and `started_at`, reset both in `clear()`. Extend `tests/test_working.py` without touching existing assertions.
-- [ ] S11-07 `/remember` saves with `source='chat'` and the current `source_session`.
-- [ ] S11-08 Add `/summary <text>` to `cli/chat.py` and `CHAT_HELP`. It saves the text (whitespace collapsed, size-checked by `check_summary`) as an LTM `summary` with category `session` (K12), source `chat`, the session id and the session period. No model involved. An exact duplicate is refused like `/remember`; near-duplicates are not hinted.
-- [ ] S11-08a Create `src/amco/summaries.py` with `summary_limit(context, reserved, memory_cap)` and `check_summary(text, max_tokens)` (K13). It imports only `working`. `/summary` uses both. 11b extends this module with `draft_summary`.
+- [x] S11-06 `working.py`: add `session_id` (short uuid) and `started_at`, reset both in `clear()`. Extend `tests/test_working.py` without touching existing assertions.
+- [x] S11-07 `/remember` saves with `source='chat'` and the current `source_session`.
+- [x] S11-08 Add `/summary <text>` to `cli/chat.py` and `CHAT_HELP`. It saves the text (whitespace collapsed, size-checked by `check_summary`) as an LTM `summary` with category `session` (K12), source `chat`, the session id and the session period. No model involved. An exact duplicate is refused like `/remember`; near-duplicates are not hinted.
+- [x] S11-08a Create `src/amco/summaries.py` with `summary_limit(context, reserved, memory_cap)` and `check_summary(text, max_tokens)` (K13). It imports only `working`. `/summary` uses both. 11b extends this module with `draft_summary`.
 - [ ] S11-09 (11b) Add `draft_summary(turns, model)` to `src/amco/summaries.py`: a fixed prompt that treats the transcript as data, caps the input to the usable context, and returns a trimmed, length-limited summary or raises on empty output. The result is saved with `source='summary'` and a confidence below 1 (a 3B model drafted it), and goes through `check_summary`.
 - [ ] S11-10 (11b) Add `/summarize`: draft with the model, show it, ask for approval, then save as in S11-08. Pass the summarizer into `run_chat` the same way `answer_fn` is passed, so tests can inject a fake.
-- [ ] S11-11 `/status` shows the session id.
+- [x] S11-11 `/status` shows the session id.
 
 **Retrieval and prompt**
 - [ ] S11-12 `ame.format_memory`: facts keep the current format exactly. Summaries and records show kind and period, for example `- [Memory 7 | summary 2026-10-20 | notes] ...`. Use `.get("kind")`, because existing tests pass memory dicts without that key.
@@ -315,8 +315,8 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 - [ ] S11-14 Check the history path end to end: a history cue lifts the long-term demotion (`usefulness(..., history=True)`), so summaries compete fairly. Do not change ranking in this sprint. Measure first.
 
 **Lifecycle rules (11b)**
-- [ ] S11-15 `lifecycle.review`: restrict BOTH the archive and the promote rule to `kind == 'fact'` (K11), and write the movement table (K3) as the module docstring. (Moved to 11a.)
-- [ ] S11-16 Tests that pin K11: no idle-time or use-count rule moves a summary or a record in either direction; expiry cleanup still applies to them. (Moved to 11a.)
+- [x] S11-15 `lifecycle.review`: restrict BOTH the archive and the promote rule to `kind == 'fact'` (K11), and write the movement table (K3) as the module docstring. (Moved to 11a.)
+- [x] S11-16 Tests that pin K11: no idle-time or use-count rule moves a summary or a record in either direction; expiry cleanup still applies to them. (Moved to 11a.)
 
 **CLI**
 - [ ] S11-17 `memory add --kind`, `memory list --kind`, `memory update --kind`, a `Kind` column in `list`, and kind, session and period lines in `inspect`. Add `KIND_HELP` to `cli/common.py`. The --type default on memory add becomes None (K8); the CLI snapshot diff must show that default change.
@@ -834,3 +834,4 @@ Criteria 3 and 4 were closed by Sprint 10a. Criteria 1, 2, 5 and 6 were closed b
 | 2026-11-19 | S11-15 and S11-16 moved from 11b to 11a; K4 widened to "never promoted or archived"; K11 added | Archiving an idle persistent summary would undo an explicit promotion; the guard is 3 lines and testable now |
 | 2026-11-19 | K12 to K14 added; S11-08a added | FTS5 indexes the category; oversize memories are silently skipped; the regression gate must work with a changed fixture hash |
 | 2026-11-19 | Regression reference changed from the local `pre-sprint-11` run to the committed `benchmarks/fts-baseline-0.6.json` | A local run is not reproducible in CI; the committed baseline is |
+| 2026-11-22 | Sprint 11a Step 2 delivered: sessions, /summary, summaries.py, lifecycle guard | S11-06 to S11-08, S11-08a, S11-11, S11-15, S11-16 done; K11 to K14 in force |
