@@ -100,12 +100,28 @@
               ],
               "secondary_opts": [],
               "required": false,
-              "default": "persistent",
+              "default": null,
               "type": "str",
               "min": null,
               "max": null,
               "is_flag": false,
-              "help": "Memory type: persistent or long_term."
+              "help": "Memory type: persistent or long_term. Default: persistent for facts, long_term for summaries and records."
+            },
+            {
+              "kind": "option",
+              "name": "kind",
+              "opts": [
+                "--kind",
+                "-k"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": "fact",
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory kind: fact, summary or record."
             },
             {
               "kind": "option",
@@ -191,6 +207,22 @@
             },
             {
               "kind": "option",
+              "name": "kind",
+              "opts": [
+                "--kind",
+                "-k"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory kind: fact, summary or record."
+            },
+            {
+              "kind": "option",
               "name": "show_all",
               "opts": [
                 "--all"
@@ -229,7 +261,7 @@
         },
         {
           "name": "update",
-          "help": "Update a memory's content, category, type, confidence, or expiry.",
+          "help": "Update a memory's content, category, type, kind, confidence, or expiry.",
           "params": [
             {
               "kind": "argument",
@@ -292,6 +324,22 @@
               "max": null,
               "is_flag": false,
               "help": "Memory type: persistent or long_term."
+            },
+            {
+              "kind": "option",
+              "name": "kind",
+              "opts": [
+                "--kind",
+                "-k"
+              ],
+              "secondary_opts": [],
+              "required": false,
+              "default": null,
+              "type": "str",
+              "min": null,
+              "max": null,
+              "is_flag": false,
+              "help": "Memory kind: fact, summary or record."
             },
             {
               "kind": "option",

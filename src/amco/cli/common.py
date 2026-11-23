@@ -26,18 +26,35 @@ from typing import Any, Callable
 import typer
 from rich.console import Console
 
-from ..storage import VALID_TYPES, SchemaError, memory_status
+from ..storage import VALID_KINDS, VALID_TYPES, SchemaError, memory_status
 
 console = Console()
 err_console = Console(stderr=True)
 
 TYPE_HELP = f"Memory type: {' or '.join(VALID_TYPES)}."
+ADD_TYPE_HELP = (
+    f"Memory type: {' or '.join(VALID_TYPES)}. "
+    "Default: persistent for facts, long_term for summaries and records."
+)
+KIND_HELP = f"Memory kind: {', '.join(VALID_KINDS[:-1])} or {VALID_KINDS[-1]}."
 CONFIDENCE_HELP = "Confidence from 0 to 1 (1 = confirmed)."
 
 
 def _status_label(item: dict) -> str:
     status = memory_status(item)
     return f"superseded by #{item['superseded_by']}" if status == "superseded" else status
+
+
+def period_text(item: dict) -> str:
+    """The period of a memory as one line, for `memory inspect`."""
+    start, end = item.get("period_start"), item.get("period_end")
+    if start and end:
+        return f"{start} to {end}"
+    if start:
+        return f"from {start}"
+    if end:
+        return f"until {end}"
+    return "(none)"
 
 
 def handle_schema_errors(command: Callable[..., Any]) -> Callable[..., Any]:

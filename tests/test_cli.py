@@ -24,7 +24,17 @@ from typer.testing import CliRunner
 from amco.cli import app
 from amco.storage import list_memories
 
+import pytest
+import amco.cli.common as common
+
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _wide_console(monkeypatch):
+    # Rich fixes the width when a console is created; a wide one keeps table assertions from wrapping.
+    monkeypatch.setattr(common.console, "_width", 200)
+    monkeypatch.setattr(common.err_console, "_width", 200)
 
 
 def _env(tmp_path: Path) -> dict[str, str]:
