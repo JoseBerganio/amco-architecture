@@ -62,3 +62,22 @@ def check_summary(text: str, max_tokens: int) -> str:
             "half of the memory budget). Shorten it, or split it into two summaries."
         )
     return cleaned
+
+
+def _day(stamp: str | None) -> str | None:
+    """The 'YYYY-MM-DD' part of a stored date or timestamp."""
+    text = stamp.strip() if stamp else ""
+    return text[:10] or None
+
+
+def period_label(kind: str, period_start: str | None, period_end: str | None) -> str:
+    """The kind and day(s) shown in a prompt line, for example 'summary 2026-11-19'.
+
+    A period that spans days shows both ends: 'summary 2026-11-19..2026-11-21'.
+    With no period only the kind is shown.
+    """
+    first, last = _day(period_start), _day(period_end)
+    if first and last and first != last:
+        return f"{kind} {first}..{last}"
+    day = first or last
+    return f"{kind} {day}" if day else kind

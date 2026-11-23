@@ -47,7 +47,7 @@ SURFACE = {
         "usefulness", "rank_memories",
     ],
     "amco.working": ["WorkingMemory", "Turn", "estimate_tokens", "utc_stamp"],
-    "amco.summaries": ["check_summary", "summary_limit", "MAX_SUMMARY_SHARE"],
+    "amco.summaries": ["check_summary", "summary_limit", "period_label", "MAX_SUMMARY_SHARE"],
     "amco.lifecycle": ["Finding", "review", "apply_finding"],
         "amco.config": [
         "model_name", "ollama_url", "int_env", "float_env", "context_settings",
