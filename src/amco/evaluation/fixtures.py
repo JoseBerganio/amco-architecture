@@ -61,6 +61,20 @@ def load_fixtures(path: Path | str | None = None) -> FixtureSet:
         raise FixtureError(f"{label}: {exc}") from exc
 
 
+# Optional fields added after the 0.6 freeze are left out of the canonical form while they
+# hold their default, so giving FixtureMemory a new field never changes the hash of a
+# dataset that does not use it (and so never invalidates an existing baseline).
+_OMIT_AT_DEFAULT = {"kind": "fact", "period_age_days": None}
+
+
+def _memory_payload(memory) -> dict:
+    data = asdict(memory)
+    for name, default in _OMIT_AT_DEFAULT.items():
+        if data.get(name) == default:
+            del data[name]
+    return data
+
+
 def canonical_json(fixtures: FixtureSet) -> str:
     """Stable text form of what affects results: memories and queries only.
 
@@ -68,7 +82,7 @@ def canonical_json(fixtures: FixtureSet) -> str:
     invalidates saved runs.
     """
     payload = {
-        "memories": [asdict(m) for m in fixtures.memories],
+        "memories": [_memory_payload(m) for m in fixtures.memories],
         "queries": [asdict(q) for q in fixtures.queries],
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)

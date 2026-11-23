@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from ..storage import VALID_TYPES
+from ..storage import VALID_KINDS, VALID_TYPES
 from .fixture_types import (
     KNOWN_TAGS,
     TASK_KINDS,
@@ -48,6 +48,7 @@ _TOP_FIELDS = {"name", "description", "memories", "queries"}
 _MEMORY_FIELDS = {
     "key", "content", "category", "memory_type", "confidence",
     "age_days", "expires_in_days", "supersedes", "use_count",
+    "kind", "period_age_days",
 }
 _QUERY_FIELDS = {
     "id", "query", "expect", "forbid", "history", "turns",
@@ -158,6 +159,8 @@ def parse_memory(raw: Any, where: str) -> FixtureMemory:
         expires_in_days=_whole(raw, "expires_in_days", where, None),
         supersedes=_text(raw, "supersedes", where, None),
         use_count=_whole(raw, "use_count", where, 0, minimum=0),
+        kind=_choice(raw, "kind", where, tuple(VALID_KINDS), "fact"),
+        period_age_days=_whole(raw, "period_age_days", where, None, minimum=0),
     )
 
 

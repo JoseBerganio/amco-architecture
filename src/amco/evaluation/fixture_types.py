@@ -34,13 +34,13 @@ VALID_SPLITS = ("train", "dev")
 VALID_ROLES = ("user", "assistant")
 
 # A typo in a tag would silently drop a query from its per-tag report, so tags are closed.
-# Later sprints add theirs here (Sprint 11 adds "ltm").
+# Later sprints add theirs here.
 KNOWN_TAGS = frozenset(
     {
         "exact", "stem", "multi-term", "paraphrase",
         "followup", "assistant-followup", "history",
         "superseded", "expired", "duplicate", "conflict",
-        "negative", "chitchat",
+        "negative", "chitchat", "ltm",
     }
 )
 
@@ -56,6 +56,8 @@ class FixtureMemory:
     expires_in_days: int | None = None  # relative to the run date; negative = already expired
     supersedes: str | None = None     # key of an OLDER memory this one replaces
     use_count: int = 0
+    kind: str = "fact"                    # fact, summary or record
+    period_age_days: int | None = None    # the period is that many days before the run date
 
 
 @dataclass(frozen=True)
