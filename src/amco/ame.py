@@ -43,6 +43,9 @@ from .storage import (
     search_memories,
     term_similarity,
 )
+
+from .summaries import period_label
+
 from .working import WorkingMemory, estimate_tokens
 
 SYSTEM_PROMPT = (
@@ -250,7 +253,13 @@ def detect_conflicts(memories: list[dict]) -> list[tuple[int, int]]:
 
 
 def format_memory(memory: dict) -> str:
-    return f"- [Memory {memory['id']} | {memory['category']}] {memory['content']}"
+    """One prompt line per memory. Facts keep the original format exactly; summaries and
+    records also show their kind and day, so the model can tell history from a stable fact."""
+    kind = memory.get("kind") or "fact"
+    if kind == "fact":
+        return f"- [Memory {memory['id']} | {memory['category']}] {memory['content']}"
+    label = period_label(kind, memory.get("period_start"), memory.get("period_end"))
+    return f"- [Memory {memory['id']} | {label} | {memory['category']}] {memory['content']}"
 
 
 def select_within_budget(
