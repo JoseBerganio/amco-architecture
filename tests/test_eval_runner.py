@@ -152,7 +152,7 @@ def test_bad_tags_and_bad_k_are_rejected():
 def test_default_dataset_runs_end_to_end():
     fixtures = load_fixtures()
     suite = run_suite(fixtures)
-    assert len(suite.results) == len(fixtures.queries) == 47
+    assert len(suite.results) == len(fixtures.queries) == 55
     assert suite.fixture_name == "default" and len(suite.fixture_hash) == 64
     # Storage guarantee, independent of any label: hidden memories never surface.
     hidden = {"meeting-day-old", "export-csv", "demo-friday"}

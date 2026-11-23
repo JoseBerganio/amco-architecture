@@ -184,7 +184,7 @@ def test_gates_set_the_exit_code_and_the_run_is_still_saved(tmp_path: Path):
 def test_default_packaged_dataset_runs_from_the_cli(tmp_path: Path):
     result = _invoke(tmp_path, "eval", "run")
     assert result.exit_code == 0
-    assert "47 queries" in result.output and "Retrieval (k=5)" in result.output
+    assert "55 queries" in result.output and "Retrieval (k=5)" in result.output
 
 
 # --- eval compare and list -----------------------------------------------------------
