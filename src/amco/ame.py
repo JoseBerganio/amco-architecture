@@ -31,7 +31,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import context_settings, followup_settings
@@ -43,6 +43,9 @@ from .storage import (
     search_memories,
     term_similarity,
 )
+
+from .summaries import period_label
+
 from .working import WorkingMemory, estimate_tokens
 
 SYSTEM_PROMPT = (
@@ -105,6 +108,7 @@ class ContextReport:
     turns_dropped: int
     retrieval_ms: float
     total_ms: float
+    selected_kinds: list[tuple[int, str]] = field(default_factory=list)
 
     def lines(self) -> list[str]:
         a = self.analysis
@@ -120,6 +124,9 @@ class ContextReport:
             + (", ".join(f"#{i} ({s:.2f})" for i, s in self.candidates) or "none")
         )
         out.append("Selected: " + (", ".join(f"#{i}" for i in self.selected) or "none"))
+        non_facts = [(i, kind) for i, kind in self.selected_kinds if kind != "fact"]
+        if non_facts:
+            out.append("Kinds: " + ", ".join(f"#{i} {kind}" for i, kind in non_facts))
         if self.skipped:
             out.append(
                 "Skipped: " + ", ".join(f"#{s['id']} ({s['reason']})" for s in self.skipped)
@@ -250,7 +257,13 @@ def detect_conflicts(memories: list[dict]) -> list[tuple[int, int]]:
 
 
 def format_memory(memory: dict) -> str:
-    return f"- [Memory {memory['id']} | {memory['category']}] {memory['content']}"
+    """One prompt line per memory. Facts keep the original format exactly; summaries and
+    records also show their kind and day, so the model can tell history from a stable fact."""
+    kind = memory.get("kind") or "fact"
+    if kind == "fact":
+        return f"- [Memory {memory['id']} | {memory['category']}] {memory['content']}"
+    label = period_label(kind, memory.get("period_start"), memory.get("period_end"))
+    return f"- [Memory {memory['id']} | {label} | {memory['category']}] {memory['content']}"
 
 
 def select_within_budget(
@@ -346,6 +359,7 @@ def prepare(query: str, working: WorkingMemory, db_path: Path | None = None) -> 
         turns_dropped=turns_dropped,
         retrieval_ms=retrieval_ms,
         total_ms=(time.perf_counter() - started) * 1000,
+        selected_kinds=[(m["id"], m.get("kind") or "fact") for m in selected],
     )
     working.last_report = report
     return PreparedContext(messages=messages, memories=selected, report=report)

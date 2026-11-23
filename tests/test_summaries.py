@@ -19,7 +19,7 @@
 
 import pytest
 
-from amco.summaries import check_summary, summary_limit
+from amco.summaries import check_summary, period_label, summary_limit
 
 
 def test_default_settings_allow_512_tokens():
@@ -52,3 +52,21 @@ def test_the_limit_is_inclusive():
     assert check_summary("x" * 40, 10) == "x" * 40  # exactly 10 tokens
     with pytest.raises(ValueError, match="too long"):
         check_summary("x" * 41, 10)  # 11 tokens
+        
+
+def test_a_single_day_period_shows_one_day():
+    assert period_label("summary", "2026-11-19 09:00:00", "2026-11-19 10:00:00") == "summary 2026-11-19"
+
+
+def test_a_multi_day_period_shows_both_ends():
+    assert period_label("record", "2026-11-19", "2026-11-21") == "record 2026-11-19..2026-11-21"
+
+
+def test_one_known_bound_is_shown_alone():
+    assert period_label("summary", "2026-11-19", None) == "summary 2026-11-19"
+    assert period_label("summary", None, "2026-11-21 08:00:00") == "summary 2026-11-21"
+
+
+def test_no_period_shows_only_the_kind():
+    assert period_label("summary", None, None) == "summary"
+    assert period_label("summary", "  ", "") == "summary"
